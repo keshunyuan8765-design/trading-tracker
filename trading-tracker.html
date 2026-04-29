@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Trading Tracker</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap');
+
+  :root {
+    --bg: #0a0a0a;
+    --surface: #141414;
+    --surface2: #1e1e1e;
+    --border: #2a2a2a;
+    --border2: #333;
+    --text: #e8e8e8;
+    --muted: #666;
+    --muted2: #888;
+    --green: #00d084;
+    --green-dim: rgba(0,208,132,0.12);
+    --red: #ff4d4d;
+    --red-dim: rgba(255,77,77,0.12);
+    --accent: #00d084;
+    --font-mono: 'IBM Plex Mono', monospace;
+    --font-sans: 'IBM Plex Sans', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    min-height: 100vh;
+    overscroll-behavior: none;
+  }
+
+  /* LOGIN */
+  #login-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 2rem;
+    gap: 2rem;
+  }
+  .login-logo {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    letter-spacing: .2em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+  .login-title {
+    font-family: var(--font-mono);
+    font-size: 28px;
+    font-weight: 400;
+    color: var(--text);
+    text-align: center;
+    line-height: 1.3;
+  }
+  .login-title span { color: var(--green); }
+  .login-subtitle {
+    font-size: 13px;
+    color: var(--muted);
+    text-align: center;
+    line-height: 1.7;
+    max-width: 280px;
+  }
+  .g-signin-wrap { margin-top: 1rem; }
+
+  /* APP SHELL */
+  #app { display: none; flex-direction: column; min-height: 100vh; }
+  #app.visible { display: flex; }
+
+  /* HEADER */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    border-bottom: 0.5px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 100;
+  }
+  .header-logo {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    letter-spacing: .15em;
+    color: var(--green);
+  }
+  .header-user {
+    font-size: 12px;
+    color: var(--muted);
+    cursor: pointer;
+  }
+
+  /* TAB NAV */
+  .tabs {
+    display: flex;
+    border-bottom: 0.5px solid var(--border);
+    background: var(--bg);
+    position: sticky;
+    top: 45px;
+    z-index: 99;
+  }
+  .tab {
+    flex: 1;
+    padding: 11px 4px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: .08em;
+    text-align: center;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 1.5px solid transparent;
+    transition: color .15s, border-color .15s;
+    text-transform: uppercase;
+  }
+  .tab.active { color: var(--green); border-bottom-color: var(--green); }
+
+  /* PAGES */
+  .page { display: none; padding: 16px; padding-bottom: 40px; }
+  .page.active { display: block; }
+
+  /* METRICS */
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0,1fr));
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .metric {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+  }
+  .metric-label {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+    font-family: var(--font-mono);
+  }
+  .metric-value {
+    font-family: var(--font-mono);
+    font-size: 20px;
+    font-weight: 500;
+    color: var(--text);
+  }
+  .metric-value.pos { color: var(--green); }
+  .metric-value.neg { color: var(--red); }
+  .metric-sub {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 3px;
+    font-family: var(--font-mono);
+  }
+
+  /* CARD */
+  .card {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+  .card-title {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 14px;
+  }
+
+  /* FORM */
+  .field { margin-bottom: 12px; }
+  .field label {
+    display: block;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    font-family: var(--font-mono);
+    margin-bottom: 6px;
+  }
+  .field input, .field select {
+    width: 100%;
+    padding: 10px 12px;
+    background: var(--surface2);
+    border: 0.5px solid var(--border2);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 15px;
+    outline: none;
+    transition: border-color .15s;
+  }
+  .field input:focus, .field select:focus { border-color: var(--green); }
+  .field select option { background: var(--surface2); }
+
+  /* BUTTONS */
+  .btn-primary {
+    width: 100%;
+    padding: 12px;
+    background: var(--green);
+    color: #000;
+    border: none;
+    border-radius: 6px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: .08em;
+    cursor: pointer;
+    transition: opacity .15s, transform .1s;
+  }
+  .btn-primary:active { transform: scale(0.98); opacity: .9; }
+  .btn-primary:disabled { opacity: .35; cursor: not-allowed; }
+
+  .btn-ghost {
+    padding: 6px 12px;
+    background: transparent;
+    border: 0.5px solid var(--border2);
+    border-radius: 6px;
+    color: var(--muted2);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: .06em;
+    cursor: pointer;
+    transition: border-color .15s, color .15s;
+  }
+  .btn-ghost:hover { border-color: var(--green); color: var(--green); }
+
+  .btn-danger {
+    padding: 4px 10px;
+    background: transparent;
+    border: 0.5px solid var(--border2);
+    border-radius: 4px;
+    color: var(--red);
+    font-size: 11px;
+    cursor: pointer;
+    font-family: var(--font-mono);
+  }
+
+  /* RECORD ROWS */
+  .record {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 0.5px solid var(--border);
+  }
+  .record:last-child { border-bottom: none; }
+  .record-left { flex: 1; min-width: 0; }
+  .record-date { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+  .record-note { font-size: 11px; color: var(--muted); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 160px; }
+  .record-right { text-align: right; flex-shrink: 0; margin-left: 12px; }
+  .record-val { font-family: var(--font-mono); font-size: 15px; font-weight: 500; }
+  .record-chg { font-family: var(--font-mono); font-size: 11px; margin-top: 2px; }
+
+  /* BADGE */
+  .badge {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 99px;
+    font-weight: 500;
+    letter-spacing: .04em;
+  }
+  .badge-in { background: var(--green-dim); color: var(--green); }
+  .badge-out { background: var(--red-dim); color: var(--red); }
+
+  /* CHART */
+  .chart-wrap { position: relative; width: 100%; height: 200px; margin-top: 8px; }
+  .chart-wrap-sm { position: relative; width: 100%; height: 140px; margin-top: 8px; }
+
+  /* PERIOD BTNS */
+  .period-row { display: flex; gap: 6px; margin-bottom: 10px; }
+  .pbtn {
+    padding: 4px 10px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: .06em;
+    border-radius: 99px;
+    border: 0.5px solid var(--border2);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .pbtn.active { background: var(--green); color: #000; border-color: var(--green); }
+
+  /* SYNC STATUS */
+  .sync-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--surface);
+    border-radius: 6px;
+    margin-bottom: 12px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .sync-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--muted);
+    flex-shrink: 0;
+  }
+  .sync-dot.ok { background: var(--green); }
+  .sync-dot.err { background: var(--red); }
+  .sync-dot.loading { background: #f0a500; animation: pulse 1s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+  /* TOAST */
+  #toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--surface2);
+    border: 0.5px solid var(--border2);
+    color: var(--text);
+    padding: 9px 18px;
+    border-radius: 99px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    opacity: 0;
+    transition: opacity .25s;
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 999;
+  }
+  #toast.show { opacity: 1; }
+
+  .empty {
+    text-align: center;
+    padding: 2rem 1rem;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: .06em;
+  }
+
+  .section-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+
+  .divider { height: 0.5px; background: var(--border); margin: 12px 0; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-logo">Algo Trading</div>
+  <div class="login-title">TRADING<br><span>TRACKER</span></div>
+  <div class="login-subtitle">記錄每日帳戶權益，同步至 Google Sheets，分析績效曲線與回撤。</div>
+  <div class="g-signin-wrap" id="g-signin-btn"></div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="header">
+    <div class="header-logo">TRACKER</div>
+    <div class="header-user" id="user-info" onclick="signOut()">登出</div>
+  </div>
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('today')">今日</div>
+    <div class="tab" onclick="switchTab('chart')">圖表</div>
+    <div class="tab" onclick="switchTab('history')">紀錄</div>
+    <div class="tab" onclick="switchTab('cashflow')">出入金</div>
+  </div>
+
+  <!-- TODAY -->
+  <div class="page active" id="page-today">
+    <div class="sync-bar"><div class="sync-dot" id="sync-dot"></div><span id="sync-text">尚未同步</span></div>
+    <div class="metrics-grid" id="metrics"></div>
+    <div class="card">
+      <div class="card-title">記錄今日權益</div>
+      <div class="field"><label>日期</label><input type="date" id="eq-date"></div>
+      <div class="field"><label>帳戶總權益 (USD)</label><input type="number" id="eq-val" placeholder="125000.00" step="0.01"></div>
+      <div class="field"><label>備註（選填）</label><input type="text" id="eq-note" placeholder="持有 NVDA long, 期權 delta hedge..."></div>
+      <button class="btn-primary" id="save-btn" onclick="saveEquity()">同步至 Google Sheets</button>
+    </div>
+  </div>
+
+  <!-- CHART -->
+  <div class="page" id="page-chart">
+    <div class="card">
+      <div class="section-row">
+        <div class="card-title" style="margin:0">權益曲線</div>
+        <div class="period-row" style="margin:0">
+          <button class="pbtn active" onclick="setPeriod(30,this)">1M</button>
+          <button class="pbtn" onclick="setPeriod(90,this)">3M</button>
+          <button class="pbtn" onclick="setPeriod(365,this)">1Y</button>
+          <button class="pbtn" onclick="setPeriod(9999,this)">全部</button>
+        </div>
+      </div>
+      <div class="chart-wrap"><canvas id="eqChart" role="img" aria-label="帳戶權益歷史折線圖">權益歷史圖表</canvas></div>
+    </div>
+    <div class="metrics-grid" id="chart-metrics"></div>
+    <div class="card">
+      <div class="card-title">最大回撤 MDD</div>
+      <div class="chart-wrap-sm"><canvas id="mddChart" role="img" aria-label="最大回撤圖">MDD圖</canvas></div>
+    </div>
+  </div>
+
+  <!-- HISTORY -->
+  <div class="page" id="page-history">
+    <div class="card">
+      <div class="section-row">
+        <div class="card-title" style="margin:0">歷史權益</div>
+        <button class="btn-ghost" onclick="loadFromSheets()">重新同步</button>
+      </div>
+      <div id="history-list"></div>
+    </div>
+  </div>
+
+  <!-- CASHFLOW -->
+  <div class="page" id="page-cashflow">
+    <div class="card">
+      <div class="card-title">新增出入金</div>
+      <div class="field"><label>日期</label><input type="date" id="cf-date"></div>
+      <div class="field">
+        <label>類型</label>
+        <select id="cf-type">
+          <option value="in">入金</option>
+          <option value="out">出金</option>
+        </select>
+      </div>
+      <div class="field"><label>金額 (USD)</label><input type="number" id="cf-val" placeholder="10000" step="0.01"></div>
+      <div class="field"><label>備註（選填）</label><input type="text" id="cf-note" placeholder="Wire transfer"></div>
+      <button class="btn-primary" onclick="saveCashflow()">儲存至 Google Sheets</button>
+    </div>
+    <div class="card">
+      <div class="section-row">
+        <div class="card-title" style="margin:0">出入金紀錄</div>
+        <button class="btn-ghost" onclick="loadCashflowFromSheets()">重新同步</button>
+      </div>
+      <div id="cf-list"></div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const CLIENT_ID = '222670680688-ebr0gacivb399cgfmobshs180cr8h3hr.apps.googleusercontent.com';
+const SPREADSHEET_ID = '1vJz4OxFcVhJHXJtVNvVe0dnQ6na1ybuJa-ZC8W0rb4M';
+const EQ_SHEET = 'Equity';
+const CF_SHEET = 'Cashflow';
+const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
+
+let accessToken = null;
+let eqData = [];
+let cfData = [];
+let eqChart = null, mddChart = null;
+let currentPeriod = 30;
+
+// ── AUTH ──────────────────────────────────────────────
+function initGSI() {
+  google.accounts.id.initialize({
+    client_id: CLIENT_ID,
+    callback: handleCredential,
+  });
+  const btn = document.getElementById('g-signin-btn');
+  google.accounts.id.renderButton(btn, {
+    theme: 'filled_black', size: 'large', text: 'signin_with', shape: 'pill', width: 260
+  });
+
+  const tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: SCOPES,
+    callback: (resp) => {
+      if (resp.access_token) {
+        accessToken = resp.access_token;
+        showApp();
+        initSheets().then(() => { loadFromSheets(); loadCashflowFromSheets(); });
+      }
+    }
+  });
+  window._tokenClient = tokenClient;
+}
+
+function handleCredential(resp) {
+  window._tokenClient.requestAccessToken({ prompt: 'consent' });
+}
+
+function signOut() {
+  google.accounts.id.disableAutoSelect();
+  accessToken = null;
+  document.getElementById('app').classList.remove('visible');
+  document.getElementById('login-screen').style.display = 'flex';
+  toast('已登出');
+}
+
+function showApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').classList.add('visible');
+  setTodayDates();
+  setSyncStatus('ok', '已連線');
+}
+
+window.addEventListener('load', () => {
+  if (typeof google !== 'undefined' && google.accounts) initGSI();
+  else document.querySelector('script[src*="gsi"]').addEventListener('load', initGSI);
+});
+
+// ── SHEETS INIT ───────────────────────────────────────
+async function sheetsRequest(method, path, body) {
+  const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}${path}`, {
+    method,
+    headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    body: body ? JSON.stringify(body) : undefined
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+async function initSheets() {
+  try {
+    const meta = await sheetsRequest('GET', '?fields=sheets.properties.title');
+    const titles = meta.sheets.map(s => s.properties.title);
+    if (!titles.includes(EQ_SHEET)) await addSheet(EQ_SHEET, ['Date','Equity','Note']);
+    if (!titles.includes(CF_SHEET)) await addSheet(CF_SHEET, ['Date','Type','Amount','Note']);
+  } catch(e) { toast('Sheet 初始化失敗'); }
+}
+
+async function addSheet(name, headers) {
+  await sheetsRequest('POST', ':batchUpdate', {
+    requests: [{ addSheet: { properties: { title: name } } }]
+  });
+  await sheetsRequest('PUT', `/values/${name}!A1:Z1?valueInputOption=RAW`, {
+    values: [headers]
+  });
+}
+
+// ── EQUITY ────────────────────────────────────────────
+async function loadFromSheets() {
+  setSyncStatus('loading', '同步中...');
+  try {
+    const res = await sheetsRequest('GET', `/values/${EQ_SHEET}!A2:C1000`);
+    const rows = res.values || [];
+    eqData = rows.map(r => ({ date: r[0]||'', val: parseFloat(r[1])||0, note: r[2]||'' }))
+                  .filter(r => r.date && r.val)
+                  .sort((a,b) => a.date.localeCompare(b.date));
+    setSyncStatus('ok', '已同步 ' + new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'}));
+    renderMetrics();
+    renderHistory();
+    if (document.getElementById('page-chart').classList.contains('active')) renderCharts();
+  } catch(e) { setSyncStatus('err', '同步失敗'); toast('讀取失敗，請確認 Sheet 權限'); }
+}
+
+async function saveEquity() {
+  const date = document.getElementById('eq-date').value;
+  const val = parseFloat(document.getElementById('eq-val').value);
+  const note = document.getElementById('eq-note').value.trim();
+  if (!date || isNaN(val)) { toast('請填入日期與權益'); return; }
+
+  const btn = document.getElementById('save-btn');
+  btn.disabled = true; btn.textContent = '儲存中...';
+  setSyncStatus('loading', '儲存中...');
+
+  try {
+    const existing = await sheetsRequest('GET', `/values/${EQ_SHEET}!A2:A1000`);
+    const rows = existing.values || [];
+    const rowIdx = rows.findIndex(r => r[0] === date);
+
+    if (rowIdx >= 0) {
+      const sheetRow = rowIdx + 2;
+      await sheetsRequest('PUT', `/values/${EQ_SHEET}!A${sheetRow}:C${sheetRow}?valueInputOption=RAW`, {
+        values: [[date, val, note]]
+      });
+      toast('已更新 ' + date);
+    } else {
+      await sheetsRequest('POST', `/values/${EQ_SHEET}!A1:C1:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`, {
+        values: [[date, val, note]]
+      });
+      toast('已儲存 ' + date);
+    }
+
+    document.getElementById('eq-val').value = '';
+    document.getElementById('eq-note').value = '';
+    await loadFromSheets();
+  } catch(e) { setSyncStatus('err', '儲存失敗'); toast('儲存失敗'); }
+  btn.disabled = false; btn.textContent = '同步至 Google Sheets';
+}
+
+// ── CASHFLOW ──────────────────────────────────────────
+async function loadCashflowFromSheets() {
+  try {
+    const res = await sheetsRequest('GET', `/values/${CF_SHEET}!A2:D1000`);
+    const rows = res.values || [];
+    cfData = rows.map(r => ({ date: r[0]||'', type: r[1]||'in', val: parseFloat(r[2])||0, note: r[3]||'' }))
+                  .filter(r => r.date && r.val)
+                  .sort((a,b) => b.date.localeCompare(a.date));
+    renderCashflow();
+    renderMetrics();
+  } catch(e) {}
+}
+
+async function saveCashflow() {
+  const date = document.getElementById('cf-date').value;
+  const type = document.getElementById('cf-type').value;
+  const val = parseFloat(document.getElementById('cf-val').value);
+  const note = document.getElementById('cf-note').value.trim();
+  if (!date || isNaN(val)) { toast('請填入日期與金額'); return; }
+
+  try {
+    await sheetsRequest('POST', `/values/${CF_SHEET}!A1:D1:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`, {
+      values: [[date, type, val, note]]
+    });
+    document.getElementById('cf-val').value = '';
+    document.getElementById('cf-note').value = '';
+    toast('已儲存');
+    await loadCashflowFromSheets();
+  } catch(e) { toast('儲存失敗'); }
+}
+
+// ── RENDER ────────────────────────────────────────────
+function renderMetrics() {
+  const el = document.getElementById('metrics');
+  if (!eqData.length) { el.innerHTML = '<div class="empty" style="grid-column:span 2">尚無資料</div>'; return; }
+  const latest = eqData[eqData.length-1];
+  const prev = eqData.length > 1 ? eqData[eqData.length-2] : null;
+  const first = eqData[0];
+  const chgPct = prev ? ((latest.val - prev.val) / Math.abs(prev.val) * 100) : 0;
+  const totalPct = ((latest.val - first.val) / Math.abs(first.val) * 100);
+  const mdd = calcMDD(eqData.map(e => e.val));
+  const totalIn = cfData.filter(c => c.type==='in').reduce((s,c)=>s+c.val,0);
+  const totalOut = cfData.filter(c => c.type==='out').reduce((s,c)=>s+c.val,0);
+  const fmt = n => n >= 1e6 ? '$'+(n/1e6).toFixed(2)+'M' : '$'+(n/1000).toFixed(1)+'K';
+  const fmtPct = n => (n>=0?'+':'')+n.toFixed(2)+'%';
+
+  el.innerHTML = `
+    <div class="metric">
+      <div class="metric-label">最新權益</div>
+      <div class="metric-value">${fmt(latest.val)}</div>
+      <div class="metric-sub">${latest.date}</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">日損益</div>
+      <div class="metric-value ${chgPct>=0?'pos':'neg'}">${fmtPct(chgPct)}</div>
+      <div class="metric-sub">${prev?'vs '+prev.date:'-'}</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">累計報酬</div>
+      <div class="metric-value ${totalPct>=0?'pos':'neg'}">${fmtPct(totalPct)}</div>
+      <div class="metric-sub">since ${first.date}</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">MDD</div>
+      <div class="metric-value neg">-${(mdd*100).toFixed(2)}%</div>
+      <div class="metric-sub">最大回撤</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">累計入金</div>
+      <div class="metric-value pos">${fmt(totalIn||0)}</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">累計出金</div>
+      <div class="metric-value">${fmt(totalOut||0)}</div>
+    </div>
+  `;
+}
+
+function renderHistory() {
+  const el = document.getElementById('history-list');
+  const list = [...eqData].reverse();
+  if (!list.length) { el.innerHTML = '<div class="empty">尚無資料</div>'; return; }
+  el.innerHTML = list.map((e,i) => {
+    const prev = list[i+1];
+    const chg = prev ? ((e.val - prev.val)/Math.abs(prev.val)*100) : null;
+    const fmt = n => n>=1000 ? '$'+(n/1000).toFixed(2)+'K' : '$'+n.toFixed(2);
+    return `<div class="record">
+      <div class="record-left">
+        <div class="record-date">${e.date}</div>
+        ${e.note ? `<div class="record-note">${e.note}</div>` : ''}
+      </div>
+      <div class="record-right">
+        <div class="record-val">${fmt(e.val)}</div>
+        ${chg!==null?`<div class="record-chg" style="color:${chg>=0?'var(--green)':'var(--red)'}">${chg>=0?'+':''}${chg.toFixed(2)}%</div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderCashflow() {
+  const el = document.getElementById('cf-list');
+  if (!cfData.length) { el.innerHTML = '<div class="empty">尚無出入金紀錄</div>'; return; }
+  el.innerHTML = cfData.map(c => `
+    <div class="record">
+      <div class="record-left">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
+          <span class="badge ${c.type==='in'?'badge-in':'badge-out'}">${c.type==='in'?'入金':'出金'}</span>
+          <span class="record-date">${c.date}</span>
+        </div>
+        ${c.note?`<div class="record-note">${c.note}</div>`:''}
+      </div>
+      <div class="record-right">
+        <div class="record-val" style="color:${c.type==='in'?'var(--green)':'var(--red)'}">${c.type==='in'?'+':'-'}$${c.val.toLocaleString()}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function filterByPeriod(arr, days) {
+  if (days >= 9999) return arr;
+  const cutoff = new Date(); cutoff.setDate(cutoff.getDate()-days);
+  const c = cutoff.toISOString().slice(0,10);
+  return arr.filter(e => e.date >= c);
+}
+
+function renderCharts() {
+  const filtered = filterByPeriod(eqData, currentPeriod);
+  const labels = filtered.map(e => e.date.slice(5));
+  const vals = filtered.map(e => e.val);
+
+  const gridColor = 'rgba(255,255,255,0.05)';
+  const textColor = '#555';
+
+  if (eqChart) eqChart.destroy();
+  const ctx1 = document.getElementById('eqChart').getContext('2d');
+  const grad = ctx1.createLinearGradient(0,0,0,200);
+  grad.addColorStop(0,'rgba(0,208,132,0.2)');
+  grad.addColorStop(1,'rgba(0,208,132,0)');
+  eqChart = new Chart(ctx1, {
+    type: 'line',
+    data: { labels, datasets: [{ label:'Equity', data: vals, borderColor:'#00d084', backgroundColor: grad, borderWidth: 1.5, pointRadius: vals.length>60?0:2, tension: 0.3, fill: true }] },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+      scales: { x:{ticks:{color:textColor,maxTicksLimit:6,maxRotation:0,font:{family:'IBM Plex Mono',size:10}},grid:{color:gridColor}}, y:{ticks:{color:textColor,callback:v=>v>=1000?(v/1000).toFixed(0)+'K':v,font:{family:'IBM Plex Mono',size:10}},grid:{color:gridColor}} } }
+  });
+
+  let peak = vals[0]||0;
+  const dds = vals.map(v => { if(v>peak)peak=v; return peak>0?-((peak-v)/peak*100):0; });
+  if (mddChart) mddChart.destroy();
+  const ctx2 = document.getElementById('mddChart').getContext('2d');
+  const grad2 = ctx2.createLinearGradient(0,0,0,140);
+  grad2.addColorStop(0,'rgba(255,77,77,0.25)'); grad2.addColorStop(1,'rgba(255,77,77,0)');
+  mddChart = new Chart(ctx2, {
+    type:'line',
+    data:{labels, datasets:[{label:'DD%',data:dds,borderColor:'#ff4d4d',backgroundColor:grad2,borderWidth:1.5,pointRadius:0,fill:true,tension:0.2}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{ticks:{color:textColor,maxTicksLimit:5,maxRotation:0,font:{family:'IBM Plex Mono',size:10}},grid:{color:gridColor}},y:{ticks:{color:textColor,callback:v=>v.toFixed(1)+'%',font:{family:'IBM Plex Mono',size:10}},grid:{color:gridColor}}}}
+  });
+
+  const mdd = vals.length ? calcMDD(vals) : 0;
+  const ret = vals.length>1 ? ((vals[vals.length-1]-vals[0])/Math.abs(vals[0])*100) : 0;
+  const fmt = n => n>=1e6?'$'+(n/1e6).toFixed(2)+'M':'$'+(n/1000).toFixed(1)+'K';
+  document.getElementById('chart-metrics').innerHTML = `
+    <div class="metric"><div class="metric-label">區間報酬</div><div class="metric-value ${ret>=0?'pos':'neg'}">${ret>=0?'+':''}${ret.toFixed(2)}%</div></div>
+    <div class="metric"><div class="metric-label">區間 MDD</div><div class="metric-value neg">-${(mdd*100).toFixed(2)}%</div></div>
+    <div class="metric"><div class="metric-label">最高權益</div><div class="metric-value">${fmt(vals.length?Math.max(...vals):0)}</div></div>
+    <div class="metric"><div class="metric-label">資料筆數</div><div class="metric-value">${vals.length}</div></div>
+  `;
+}
+
+function calcMDD(vals) {
+  let peak = vals[0]||0, mdd = 0;
+  for (const v of vals) { if(v>peak)peak=v; const dd=(peak-v)/peak; if(dd>mdd)mdd=dd; }
+  return mdd;
+}
+
+// ── UI HELPERS ────────────────────────────────────────
+function switchTab(name) {
+  const tabs = ['today','chart','history','cashflow'];
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', tabs[i]===name));
+  document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id==='page-'+name));
+  if (name==='chart') renderCharts();
+  if (name==='history') renderHistory();
+  if (name==='cashflow') renderCashflow();
+}
+
+function setPeriod(days, btn) {
+  currentPeriod = days;
+  document.querySelectorAll('.pbtn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderCharts();
+}
+
+function setSyncStatus(state, text) {
+  const dot = document.getElementById('sync-dot');
+  dot.className = 'sync-dot ' + state;
+  document.getElementById('sync-text').textContent = text;
+}
+
+function setTodayDates() {
+  const t = new Date().toISOString().slice(0,10);
+  document.getElementById('eq-date').value = t;
+  document.getElementById('cf-date').value = t;
+}
+
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2200);
+}
+</script>
+</body>
+</html>
