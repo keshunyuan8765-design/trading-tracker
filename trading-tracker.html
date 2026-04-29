@@ -149,7 +149,6 @@
     <div class="tab" onclick="switchTab('cashflow')">出入金</div>
   </div>
 
-  <!-- TODAY -->
   <div class="page active" id="page-today">
     <div class="sync-bar"><div class="sync-dot" id="sync-dot"></div><span id="sync-text">尚未同步</span></div>
     <div class="combined-card" id="combined-summary"></div>
@@ -174,7 +173,6 @@
     </div>
   </div>
 
-  <!-- CHART -->
   <div class="page" id="page-chart">
     <div class="card">
       <div class="section-row" style="margin-bottom:8px">
@@ -200,7 +198,6 @@
     </div>
   </div>
 
-  <!-- HISTORY -->
   <div class="page" id="page-history">
     <div class="card">
       <div class="section-row">
@@ -215,7 +212,6 @@
     </div>
   </div>
 
-  <!-- CASHFLOW -->
   <div class="page" id="page-cashflow">
     <div class="card">
       <div class="card-title">新增出入金</div>
@@ -248,6 +244,8 @@ const SPREADSHEET_ID = '1vJz4OxFcVhJHXJtVNvVe0dnQ6na1ybuJa-ZC8W0rb4M';
 const EQ_SHEET = 'Equity';
 const CF_SHEET = 'Cashflow';
 const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
+const TOKEN_KEY = 'tt_access_token';
+const TOKEN_EXP_KEY = 'tt_token_exp';
 
 let accessToken = null;
 let eqData = { yf:[], ty:[] };
@@ -257,6 +255,35 @@ let currentPeriod = 30;
 let chartMode = 'yf';
 let histTab = 'yf';
 
+// ── TOKEN PERSISTENCE ─────────────────────────────────
+function saveToken(token) {
+  const exp = Date.now() + 55 * 60 * 1000; // 55 min (token lasts 60)
+  localStorage.setItem(TOKEN_KEY, token);
+  localStorage.setItem(TOKEN_EXP_KEY, exp.toString());
+}
+function loadToken() {
+  const token = localStorage.getItem(TOKEN_KEY);
+  const exp = parseInt(localStorage.getItem(TOKEN_EXP_KEY) || '0');
+  if (token && Date.now() < exp) return token;
+  return null;
+}
+function clearToken() {
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(TOKEN_EXP_KEY);
+}
+
+// Auto-refresh token 5 min before expiry
+function scheduleTokenRefresh() {
+  const exp = parseInt(localStorage.getItem(TOKEN_EXP_KEY) || '0');
+  const msLeft = exp - Date.now() - 5 * 60 * 1000;
+  if (msLeft > 0) {
+    setTimeout(() => {
+      window._tokenClient.requestAccessToken({ prompt: '' });
+    }, msLeft);
+  }
+}
+
+// ── AUTH ──────────────────────────────────────────────
 function initGSI() {
   google.accounts.id.initialize({ client_id: CLIENT_ID, callback: handleCredential });
   google.accounts.id.renderButton(document.getElementById('g-signin-btn'), {
@@ -267,37 +294,73 @@ function initGSI() {
     callback: (resp) => {
       if (resp.access_token) {
         accessToken = resp.access_token;
+        saveToken(accessToken);
+        scheduleTokenRefresh();
         showApp();
         initSheets().then(() => { loadFromSheets(); loadCashflowFromSheets(); });
       }
     }
   });
+
+  // Try silent auto-login with saved token
+  const saved = loadToken();
+  if (saved) {
+    accessToken = saved;
+    scheduleTokenRefresh();
+    showApp();
+    initSheets().then(() => { loadFromSheets(); loadCashflowFromSheets(); });
+  } else {
+    // Try silent token request (no popup)
+    google.accounts.id.prompt((notification) => {
+      if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+        // Show login screen normally
+      }
+    });
+  }
 }
-function handleCredential() { window._tokenClient.requestAccessToken({ prompt:'consent' }); }
+
+function handleCredential() {
+  window._tokenClient.requestAccessToken({ prompt: 'consent' });
+}
+
 function signOut() {
   google.accounts.id.disableAutoSelect();
+  clearToken();
   accessToken = null;
   document.getElementById('app').classList.remove('visible');
   document.getElementById('login-screen').style.display = 'flex';
   toast('已登出');
 }
+
 function showApp() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').classList.add('visible');
   setTodayDates();
-  setSyncStatus('ok','已連線');
+  setSyncStatus('ok', '已連線');
 }
+
 window.addEventListener('load', () => {
   if (typeof google !== 'undefined' && google.accounts) initGSI();
   else document.querySelector('script[src*="gsi"]').addEventListener('load', initGSI);
 });
 
+// ── SHEETS API ────────────────────────────────────────
 async function api(method, path, body) {
   const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}${path}`, {
     method,
-    headers:{ 'Authorization':`Bearer ${accessToken}`, 'Content-Type':'application/json' },
+    headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
     body: body ? JSON.stringify(body) : undefined
   });
+  if (res.status === 401) {
+    // Token expired, clear and ask to re-login
+    clearToken();
+    toast('登入已過期，請重新登入');
+    setTimeout(() => {
+      document.getElementById('app').classList.remove('visible');
+      document.getElementById('login-screen').style.display = 'flex';
+    }, 1500);
+    throw new Error('401');
+  }
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
@@ -314,25 +377,28 @@ async function initSheets() {
       await api('POST', ':batchUpdate', { requests:[{ addSheet:{ properties:{ title:CF_SHEET } } }] });
       await api('PUT', `/values/${CF_SHEET}!A1:E1?valueInputOption=RAW`, { values:[['Date','Account','Type','Amount','Note']] });
     }
-  } catch(e) { toast('Sheet 初始化失敗'); }
+  } catch(e) { if (e.message !== '401') toast('Sheet 初始化失敗'); }
 }
 
+// ── LOAD ──────────────────────────────────────────────
 async function loadFromSheets() {
-  setSyncStatus('loading','同步中...');
+  setSyncStatus('loading', '同步中...');
   try {
     const res = await api('GET', `/values/${EQ_SHEET}!A2:E2000`);
     const rows = res.values || [];
-    eqData.yf = rows.map(r => ({ date:r[0]||'', val:parseFloat(r[1])||0, note:r[2]||'' }))
+    const parseVal = v => parseFloat((v||'').toString().replace(/,/g, '')) || 0;
+    eqData.yf = rows.map(r => ({ date:r[0]||'', val:parseVal(r[1]), note:r[2]||'' }))
                      .filter(r => r.date && r.val).sort((a,b) => a.date.localeCompare(b.date));
-    eqData.ty = rows.map(r => ({ date:r[0]||'', val:parseFloat(r[3])||0, note:r[4]||'' }))
+    eqData.ty = rows.map(r => ({ date:r[0]||'', val:parseVal(r[3]), note:r[4]||'' }))
                      .filter(r => r.date && r.val).sort((a,b) => a.date.localeCompare(b.date));
-    setSyncStatus('ok','已同步 '+new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'}));
+    setSyncStatus('ok', '已同步 '+new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'}));
     renderCombinedSummary();
     renderHistory();
     if (document.getElementById('page-chart').classList.contains('active')) renderCharts();
-  } catch(e) { setSyncStatus('err','同步失敗'); toast('讀取失敗'); }
+  } catch(e) { if (e.message !== '401') { setSyncStatus('err','同步失敗'); toast('讀取失敗'); } }
 }
 
+// ── SAVE EQUITY ───────────────────────────────────────
 async function saveEquity() {
   const date = document.getElementById('eq-date').value;
   const yfVal = document.getElementById('yf-val').value;
@@ -340,7 +406,7 @@ async function saveEquity() {
   if (!date || (!yfVal && !tyVal)) { toast('請填入日期與至少一個帳戶的權益'); return; }
   const btn = document.getElementById('save-btn');
   btn.disabled = true; btn.textContent = '儲存中...';
-  setSyncStatus('loading','儲存中...');
+  setSyncStatus('loading', '儲存中...');
   try {
     const existing = await api('GET', `/values/${EQ_SHEET}!A2:A2000`);
     const rows = existing.values || [];
@@ -356,14 +422,16 @@ async function saveEquity() {
     }
     ['yf-val','ty-val','yf-note','ty-note'].forEach(id => document.getElementById(id).value='');
     await loadFromSheets();
-  } catch(e) { setSyncStatus('err','儲存失敗'); toast('儲存失敗'); }
+  } catch(e) { if (e.message !== '401') { setSyncStatus('err','儲存失敗'); toast('儲存失敗'); } }
   btn.disabled = false; btn.textContent = '同步至 Google Sheets';
 }
 
+// ── CASHFLOW ──────────────────────────────────────────
 async function loadCashflowFromSheets() {
   try {
     const res = await api('GET', `/values/${CF_SHEET}!A2:E2000`);
-    cfData = (res.values||[]).map(r => ({ date:r[0]||'', acct:r[1]||'yf', type:r[2]||'in', val:parseFloat(r[3])||0, note:r[4]||'' }))
+    const parseVal = v => parseFloat((v||'').toString().replace(/,/g,'')) || 0;
+    cfData = (res.values||[]).map(r => ({ date:r[0]||'', acct:r[1]||'yf', type:r[2]||'in', val:parseVal(r[3]), note:r[4]||'' }))
                               .filter(r => r.date && r.val).sort((a,b) => b.date.localeCompare(a.date));
     renderCashflow();
   } catch(e) {}
@@ -381,9 +449,10 @@ async function saveCashflow() {
     document.getElementById('cf-note').value='';
     toast('已儲存');
     await loadCashflowFromSheets();
-  } catch(e) { toast('儲存失敗'); }
+  } catch(e) { if (e.message !== '401') toast('儲存失敗'); }
 }
 
+// ── HELPERS ───────────────────────────────────────────
 function fmtTWD(n) {
   if (!n) return 'NT$0';
   if (n >= 1e6) return 'NT$'+(n/1e4).toFixed(0)+'萬';
@@ -403,6 +472,7 @@ function filterPeriod(arr) {
   return arr.filter(e => e.date >= c);
 }
 
+// ── RENDER ────────────────────────────────────────────
 function renderCombinedSummary() {
   const el = document.getElementById('combined-summary');
   const row = (key, label, color) => {
@@ -414,14 +484,12 @@ function renderCombinedSummary() {
     return `<div class="combined-row"><div class="combined-name"><span style="width:7px;height:7px;border-radius:50%;background:${color};display:inline-block;flex-shrink:0"></span>${label}</div>
       <div class="combined-vals"><div class="combined-eq">${fmtTWD(latest.val)}</div>${chg!==null?`<div class="combined-chg" style="color:${chg>=0?'var(--green)':'var(--red)'}">${fmtPct(chg)}</div>`:''}</div></div>`;
   };
-  const total = (eqData.yf.length?eqData.yf[eqData.yf.length-1].val:0) + (eqData.ty.length?eqData.ty[eqData.ty.length-1].val:0);
+  const total = (eqData.yf.length?eqData.yf[eqData.yf.length-1].val:0)+(eqData.ty.length?eqData.ty[eqData.ty.length-1].val:0);
   el.innerHTML = `<div class="combined-title">帳戶總覽 · ${new Date().toLocaleDateString('zh-TW')}</div>
     ${row('yf','永豐','var(--green)')}
     ${row('ty','統一','var(--blue)')}
-    <div class="combined-row" style="margin-top:2px">
-      <div class="combined-name" style="font-weight:500;color:var(--text)">合計</div>
-      <div class="combined-vals"><div class="combined-eq" style="color:var(--yellow);font-size:16px">${fmtTWD(total)}</div></div>
-    </div>`;
+    <div class="combined-row"><div class="combined-name" style="font-weight:500;color:var(--text)">合計</div>
+    <div class="combined-vals"><div class="combined-eq" style="color:var(--yellow);font-size:16px">${fmtTWD(total)}</div></div></div>`;
 }
 
 function renderCharts() {
@@ -441,7 +509,7 @@ function renderCharts() {
     const d=chartMode==='yf'?yfF:tyF;
     const color=chartMode==='yf'?'#00d084':'#4d9fff';
     labels=d.map(e=>e.date.slice(5));
-    datasets=[{label:chartMode==='yf'?'永豐':'統一',data:d.map(e=>e.val),borderColor:color,backgroundColor:color.replace('rgb','rgba').replace(')',',0.15)'),borderWidth:1.5,pointRadius:d.length>60?0:2,tension:0.3,fill:true}];
+    datasets=[{label:chartMode==='yf'?'永豐':'統一',data:d.map(e=>e.val),borderColor:color,backgroundColor:color==='#00d084'?'rgba(0,208,132,0.15)':'rgba(77,159,255,0.15)',borderWidth:1.5,pointRadius:d.length>60?0:2,tension:0.3,fill:true}];
   }
   if (eqChart) eqChart.destroy();
   eqChart = new Chart(document.getElementById('eqChart').getContext('2d'), {
@@ -465,7 +533,7 @@ function renderCharts() {
               y:{ticks:{color:tc,callback:v=>v.toFixed(1)+'%',font:{family:mf,size:10}},grid:{color:gc}}}}
   });
 
-  const cm = document.getElementById('chart-metrics');
+  const cm=document.getElementById('chart-metrics');
   const block=(d,label,color)=>{
     if(!d.length)return'';
     const vals=d.map(e=>e.val);
@@ -475,22 +543,22 @@ function renderCharts() {
             <div class="metric"><div class="metric-label" style="color:${color}">${label} MDD</div><div class="metric-value neg">-${(mdd*100).toFixed(2)}%</div></div>`;
   };
   if (chartMode==='both') {
-    cm.innerHTML = block(yfF,'永豐','var(--green)') + block(tyF,'統一','var(--blue)');
+    cm.innerHTML=block(yfF,'永豐','var(--green)')+block(tyF,'統一','var(--blue)');
   } else {
     const d=chartMode==='yf'?yfF:tyF;
     const label=chartMode==='yf'?'永豐':'統一';
     const color=chartMode==='yf'?'var(--green)':'var(--blue)';
-    cm.innerHTML = block(d,label,color) +
+    cm.innerHTML=block(d,label,color)+
       `<div class="metric"><div class="metric-label">最高權益</div><div class="metric-value">${d.length?fmtTWD(Math.max(...d.map(e=>e.val))):'-'}</div></div>
        <div class="metric"><div class="metric-label">資料筆數</div><div class="metric-value">${d.length}</div></div>`;
   }
 }
 
 function renderHistory() {
-  const el = document.getElementById('history-list');
-  const list = [...eqData[histTab]].reverse();
-  if (!list.length) { el.innerHTML='<div class="empty">尚無資料</div>'; return; }
-  el.innerHTML = list.map((e,i)=>{
+  const el=document.getElementById('history-list');
+  const list=[...eqData[histTab]].reverse();
+  if(!list.length){el.innerHTML='<div class="empty">尚無資料</div>';return;}
+  el.innerHTML=list.map((e,i)=>{
     const prev=list[i+1];
     const chg=prev?((e.val-prev.val)/Math.abs(prev.val)*100):null;
     return `<div class="record"><div class="record-left"><div class="record-date">${e.date}</div>${e.note?`<div class="record-note">${e.note}</div>`:''}</div>
@@ -499,9 +567,9 @@ function renderHistory() {
 }
 
 function renderCashflow() {
-  const el = document.getElementById('cf-list');
-  if (!cfData.length) { el.innerHTML='<div class="empty">尚無出入金紀錄</div>'; return; }
-  el.innerHTML = cfData.map(c=>`<div class="record">
+  const el=document.getElementById('cf-list');
+  if(!cfData.length){el.innerHTML='<div class="empty">尚無出入金紀錄</div>';return;}
+  el.innerHTML=cfData.map(c=>`<div class="record">
     <div class="record-left">
       <div style="display:flex;align-items:center;gap:5px;margin-bottom:3px">
         <span class="badge ${c.acct==='yf'?'badge-yf':'badge-ty'}">${c.acct==='yf'?'永豐':'統一'}</span>
@@ -514,6 +582,7 @@ function renderCashflow() {
   </div>`).join('');
 }
 
+// ── UI ────────────────────────────────────────────────
 function switchTab(name) {
   const tabs=['today','chart','history','cashflow'];
   document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',tabs[i]===name));
@@ -522,35 +591,35 @@ function switchTab(name) {
   if(name==='history')renderHistory();
   if(name==='cashflow')renderCashflow();
 }
-function setPeriod(days,btn) {
+function setPeriod(days,btn){
   currentPeriod=days;
   document.querySelectorAll('.pbtn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   renderCharts();
 }
-function setChartMode(mode) {
+function setChartMode(mode){
   chartMode=mode;
   document.getElementById('ct-yf').className='ctbtn'+(mode==='yf'?' on-yf':'');
   document.getElementById('ct-ty').className='ctbtn'+(mode==='ty'?' on-ty':'');
   document.getElementById('ct-both').className='ctbtn'+(mode==='both'?' on-both':'');
   renderCharts();
 }
-function setHistTab(tab) {
+function setHistTab(tab){
   histTab=tab;
   document.getElementById('ht-yf').className='ctbtn'+(tab==='yf'?' on-yf':'');
   document.getElementById('ht-ty').className='ctbtn'+(tab==='ty'?' on-ty':'');
   renderHistory();
 }
-function setSyncStatus(state,text) {
+function setSyncStatus(state,text){
   document.getElementById('sync-dot').className='sync-dot '+state;
   document.getElementById('sync-text').textContent=text;
 }
-function setTodayDates() {
+function setTodayDates(){
   const t=new Date().toISOString().slice(0,10);
   document.getElementById('eq-date').value=t;
   document.getElementById('cf-date').value=t;
 }
-function toast(msg) {
+function toast(msg){
   const el=document.getElementById('toast');
   el.textContent=msg; el.classList.add('show');
   setTimeout(()=>el.classList.remove('show'),2200);
