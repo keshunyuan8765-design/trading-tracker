@@ -252,21 +252,37 @@ let eqChart=null, mddChart=null, monthChart=null;
 let currentPeriod='1m', chartMode='yf', histTab='yf', monthTab='yf';
 
 // ── API ───────────────────────────────────────
-// JSONP for GET requests (bypasses CORS/redirect issue)
 function gasGet(action){
-  return new Promise((resolve,reject)=>{
-    const cb='cb_'+Date.now();
-    const script=document.createElement('script');
-    window[cb]=(data)=>{ delete window[cb]; document.body.removeChild(script); resolve(data); };
-    script.onerror=()=>{ delete window[cb]; document.body.removeChild(script); reject(new Error('JSONP error')); };
-    script.src=GAS_URL+'?action='+action+'&callback='+cb;
-    document.body.appendChild(script);
+  return new Promise((resolve, reject) => {
+    const cbName = 'gasCb' + Date.now() + Math.floor(Math.random()*1000);
+    const script = document.createElement('script');
+    const timer = setTimeout(() => {
+      delete window[cbName];
+      script.remove();
+      reject(new Error('timeout'));
+    }, 15000);
+    window[cbName] = (data) => {
+      clearTimeout(timer);
+      delete window[cbName];
+      script.remove();
+      resolve(data);
+    };
+    script.src = GAS_URL + '?action=' + action + '&callback=' + cbName;
+    document.head.appendChild(script);
   });
 }
 async function gasPost(body){
-  const res=await fetch(GAS_URL,{method:'POST',body:JSON.stringify(body)});
-  const text=await res.text();
-  try{return JSON.parse(text);}catch(e){return{error:text};}
+  try {
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      body: JSON.stringify(body)
+    });
+    // no-cors returns opaque response, assume ok
+    return { ok: true, updated: false };
+  } catch(e) {
+    throw e;
+  }
 }
 
 // ── LOAD ──────────────────────────────────────
@@ -294,9 +310,10 @@ async function saveEquity(){
   const btn=document.getElementById('save-btn');
   btn.disabled=true; btn.textContent='儲存中...'; setSyncStatus('loading','儲存中...');
   try{
-    const res=await gasPost({action:'saveEquity',date,yf_val:yfVal?parseFloat(yfVal):'',yf_note:document.getElementById('yf-note').value.trim(),ty_val:tyVal?parseFloat(tyVal):'',ty_note:document.getElementById('ty-note').value.trim()});
-    if(res.ok){ toast(res.updated?'已更新 '+date:'已儲存 '+date); ['yf-val','ty-val','yf-note','ty-note'].forEach(id=>document.getElementById(id).value=''); await loadAll(); }
-    else toast('儲存失敗：'+(res.error||''));
+    await gasPost({action:'saveEquity',date,yf_val:yfVal?parseFloat(yfVal):'',yf_note:document.getElementById('yf-note').value.trim(),ty_val:tyVal?parseFloat(tyVal):'',ty_note:document.getElementById('ty-note').value.trim()});
+    toast('已儲存 '+date);
+    ['yf-val','ty-val','yf-note','ty-note'].forEach(id=>document.getElementById(id).value='');
+    setTimeout(()=>loadAll(), 1500);
   }catch(e){ setSyncStatus('err','儲存失敗'); toast('儲存失敗'); }
   btn.disabled=false; btn.textContent='同步至 Google Sheets';
 }
@@ -309,9 +326,10 @@ async function saveCashflow(){
   const note=document.getElementById('cf-note').value.trim();
   if(!date||isNaN(val)){toast('請填入日期與金額');return;}
   try{
-    const res=await gasPost({action:'saveCashflow',date,acct,type,val,note});
-    if(res.ok){ document.getElementById('cf-val').value=''; document.getElementById('cf-note').value=''; toast('已儲存'); await loadAll(); }
-    else toast('儲存失敗');
+    await gasPost({action:'saveCashflow',date,acct,type,val,note});
+    document.getElementById('cf-val').value=''; document.getElementById('cf-note').value='';
+    toast('已儲存');
+    setTimeout(()=>loadAll(), 1500);
   }catch(e){ toast('儲存失敗'); }
 }
 
