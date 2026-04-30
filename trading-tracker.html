@@ -122,7 +122,7 @@
 <body>
 <div id="app">
   <div class="header">
-    <div class="header-logo">TRACKER</div>
+    <div class="header-logo">TRACKER <span style="font-size:9px;color:var(--muted);letter-spacing:.05em">v1.0</span></div>
     <div class="header-sub">台指期 · Algo</div>
   </div>
   <div class="tabs">
@@ -351,6 +351,19 @@ function calcAdjDailyChg(cur,prev,acctKey){ if(!prev)return null; return(cur.val
 function calcTWR(eqArr,acctKey){ if(eqArr.length<2)return 0; let twr=1; for(let i=1;i<eqArr.length;i++){twr*=(eqArr[i].val-getDayFlow(eqArr[i].date,acctKey))/Math.abs(eqArr[i-1].val);} return(twr-1)*100; }
 function calcAdjMDD(eqArr,acctKey){ if(!eqArr.length)return 0; let peak=eqArr[0].val,mdd=0; for(const e of eqArr){const f=getDayFlow(e.date,acctKey);if(f!==0)peak=e.val;if(e.val>peak)peak=e.val;const dd=(peak-e.val)/peak;if(dd>mdd)mdd=dd;} return mdd; }
 function calcAdjMDDSeries(eqArr,acctKey){ if(!eqArr.length)return[]; let peak=eqArr[0].val; return eqArr.map(e=>{const f=getDayFlow(e.date,acctKey);if(f!==0)peak=e.val;if(e.val>peak)peak=e.val;return peak>0?-((peak-e.val)/peak*100):0;}); }
+// 累計獲利曲線：實際帳戶 + 累計出金 - 累計入金 - 初始本金
+function calcProfitSeries(arr, acctKey){
+  if(!arr.length) return [];
+  const initialCapital = arr[0].val;
+  const flows = cfData.filter(c=>c.acct===acctKey).sort((a,b)=>a.date.localeCompare(b.date));
+  return arr.map(e=>{
+    const cumOut = flows.filter(f=>f.date<=e.date&&f.type==='out').reduce((s,f)=>s+f.val,0);
+    const cumIn  = flows.filter(f=>f.date< arr[0].date&&f.type==='in').reduce((s,f)=>s+f.val,0);
+    const cumInAfter = flows.filter(f=>f.date>arr[0].date&&f.date<=e.date&&f.type==='in').reduce((s,f)=>s+f.val,0);
+    return e.val + cumOut - cumInAfter - initialCapital;
+  });
+}
+
 function getMonthlyData(arr,acctKey){
   const map={}; for(const e of arr){ map[e.date.slice(0,7)]=e; }
   const months=Object.keys(map).sort();
@@ -400,14 +413,21 @@ function renderCharts(){
   } else {
     const d=chartMode==='yf'?yfF:tyF,color=chartMode==='yf'?'#00a86b':'#2080e0',bgColor=chartMode==='yf'?'rgba(0,168,107,0.1)':'rgba(32,128,224,0.1)';
     labels=d.map(e=>e.date.slice(5));
-    datasets=[{label:chartMode==='yf'?'永豐':'統一',data:d.map(e=>e.val),borderColor:color,backgroundColor:bgColor,borderWidth:1.5,pointRadius:0,tension:0.3,fill:true}];
+    const profit=calcProfitSeries(d,chartMode);
+    const hasCF=cfData.some(c=>c.acct===chartMode&&d.some(e=>e.date>=c.date));
+    datasets=[
+      {label:'實際帳戶',data:d.map(e=>e.val),borderColor:color,backgroundColor:bgColor,borderWidth:1.5,pointRadius:0,tension:0.3,fill:true}
+    ];
+    if(hasCF&&profit.some(v=>v!==0)){
+      datasets.push({label:'累計獲利',data:profit,borderColor:'#f0a500',backgroundColor:'rgba(240,160,0,0.08)',borderWidth:1.5,pointRadius:0,tension:0.3,fill:true,borderDash:[5,3]});
+    }
     const mk=cfMarkers(d,chartMode); if(mk)datasets.push(mk);
   }
   if(eqChart)eqChart.destroy();
   eqChart=new Chart(document.getElementById('eqChart').getContext('2d'),{
     type:'line',data:{labels,datasets},
     options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:chartMode==='both',labels:{color:'#999',font:{family:mf,size:11},boxWidth:10,padding:12}},
+      plugins:{legend:{display:true,labels:{color:'#999',font:{family:mf,size:11},boxWidth:10,padding:12}},
                tooltip:{callbacks:{label:(ctx)=>{ if(ctx.dataset.label==='出入金'){const d=chartMode==='yf'?yfF:tyF,date=d[ctx.dataIndex]?.date,flows=cfData.filter(c=>c.acct===chartMode&&c.date===date);return flows.map(f=>`${f.type==='out'?'出金':'入金'} ${fmtTWD(f.val)}`);} return fmtTWD(ctx.raw); }}}},
       scales:{x:{ticks:{color:tc,maxTicksLimit:6,maxRotation:0,font:{family:mf,size:10}},grid:{color:gc}},y:{ticks:{color:tc,callback:v=>v>=10000?(v/10000).toFixed(0)+'萬':v,font:{family:mf,size:10}},grid:{color:gc}}}}
   });
