@@ -8,13 +8,13 @@
 <style>
   @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap');
   :root {
-    --bg:#f5f5f5; --surface:#ffffff; --surface2:#f0f0f0;
-    --border:#e0e0e0; --border2:#d0d0d0;
+    --bg:#f7f7f7; --surface:#ffffff; --surface2:#f0f0f0;
+    --border:#e8e8e8; --border2:#d8d8d8;
     --text:#1a1a1a; --muted:#999; --muted2:#777;
     --green:#00a86b; --green-dim:rgba(0,168,107,0.1);
     --red:#e03333; --red-dim:rgba(224,51,51,0.1);
     --blue:#2080e0; --blue-dim:rgba(32,128,224,0.1);
-    --yellow:#d4900a;
+    --yellow:#c47f00;
     --mono:'IBM Plex Mono',monospace;
     --sans:'IBM Plex Sans',sans-serif;
   }
@@ -33,12 +33,12 @@
   .page{display:none;padding:14px;padding-bottom:40px}
   .page.active{display:block}
 
-  .sync-bar{display:flex;align-items:center;gap:8px;padding:7px 12px;background:var(--surface);border-radius:6px;margin-bottom:12px;font-family:var(--mono);font-size:11px;color:var(--muted)}
+  .sync-bar{display:flex;align-items:center;gap:8px;padding:7px 12px;background:var(--surface);border:0.5px solid var(--border);border-radius:6px;margin-bottom:12px;font-family:var(--mono);font-size:11px;color:var(--muted)}
   .sync-dot{width:6px;height:6px;border-radius:50%;background:var(--muted);flex-shrink:0}
-  .sync-dot.ok{background:var(--green)}.sync-dot.err{background:var(--red)}.sync-dot.loading{background:#f0c040;animation:pulse 1s infinite}
+  .sync-dot.ok{background:var(--green)}.sync-dot.err{background:var(--red)}.sync-dot.loading{background:#f0a500;animation:pulse 1s infinite}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 
-  .combined-card{background:var(--surface);border:0.5px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px}
+  .combined-card{background:var(--surface);border:0.5px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,0.06)}
   .combined-title{font-family:var(--mono);font-size:11px;letter-spacing:.08em;color:var(--muted);text-transform:uppercase;margin-bottom:10px}
   .combined-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:0.5px solid var(--border)}
   .combined-row:last-child{border-bottom:none}
@@ -47,7 +47,7 @@
   .combined-eq{font-family:var(--mono);font-size:14px;font-weight:500}
   .combined-chg{font-family:var(--mono);font-size:11px;margin-top:2px}
 
-  .card{background:var(--surface);border:0.5px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px}
+  .card{background:var(--surface);border:0.5px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,0.06)}
   .card-title{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:13px}
 
   .acct-section{border:0.5px solid var(--border);border-radius:8px;margin-bottom:10px;overflow:hidden}
@@ -61,16 +61,15 @@
   .field label{display:block;font-size:11px;color:var(--muted);letter-spacing:.05em;text-transform:uppercase;font-family:var(--mono);margin-bottom:5px}
   .field input,.field select{width:100%;padding:9px 12px;background:var(--surface2);border:0.5px solid var(--border2);border-radius:6px;color:var(--text);font-family:var(--mono);font-size:15px;outline:none;transition:border-color .15s}
   .field input:focus,.field select:focus{border-color:var(--green)}
-  .field select option{background:var(--surface2)}
 
-  .btn-primary{width:100%;padding:11px;background:var(--green);color:#000;border:none;border-radius:6px;font-family:var(--mono);font-size:13px;font-weight:500;letter-spacing:.08em;cursor:pointer;transition:opacity .15s,transform .1s;margin-top:4px}
+  .btn-primary{width:100%;padding:11px;background:var(--green);color:#fff;border:none;border-radius:6px;font-family:var(--mono);font-size:13px;font-weight:500;letter-spacing:.08em;cursor:pointer;transition:opacity .15s,transform .1s;margin-top:4px}
   .btn-primary:active{transform:scale(0.98);opacity:.9}
   .btn-primary:disabled{opacity:.35;cursor:not-allowed}
   .btn-ghost{padding:5px 11px;background:transparent;border:0.5px solid var(--border2);border-radius:6px;color:var(--muted2);font-family:var(--mono);font-size:11px;cursor:pointer;transition:border-color .15s,color .15s}
   .btn-ghost:hover{border-color:var(--green);color:var(--green)}
 
   .metrics-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:12px}
-  .metric{background:var(--surface);border:0.5px solid var(--border);border-radius:8px;padding:11px 13px}
+  .metric{background:var(--surface);border:0.5px solid var(--border);border-radius:8px;padding:11px 13px;box-shadow:0 1px 3px rgba(0,0,0,0.05)}
   .metric-label{font-size:11px;color:var(--muted);letter-spacing:.05em;text-transform:uppercase;margin-bottom:5px;font-family:var(--mono)}
   .metric-value{font-family:var(--mono);font-size:18px;font-weight:500;color:var(--text)}
   .metric-value.pos{color:var(--green)}.metric-value.neg{color:var(--red)}
@@ -80,11 +79,11 @@
   .ctbtn{padding:4px 11px;font-family:var(--mono);font-size:11px;border-radius:99px;border:0.5px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;transition:all .15s;letter-spacing:.04em}
   .ctbtn.on-yf{border-color:var(--green);color:var(--green);background:var(--green-dim)}
   .ctbtn.on-ty{border-color:var(--blue);color:var(--blue);background:var(--blue-dim)}
-  .ctbtn.on-both{border-color:var(--yellow);color:var(--yellow);background:rgba(240,192,64,0.1)}
+  .ctbtn.on-both{border-color:var(--yellow);color:var(--yellow);background:rgba(196,127,0,0.1)}
 
   .period-row{display:flex;gap:5px;margin-bottom:10px;flex-wrap:wrap}
   .pbtn{padding:4px 9px;font-family:var(--mono);font-size:11px;border-radius:99px;border:0.5px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;transition:all .15s}
-  .pbtn.active{background:var(--green);color:#000;border-color:var(--green)}
+  .pbtn.active{background:var(--green);color:#fff;border-color:var(--green)}
 
   .chart-wrap{position:relative;width:100%;height:200px;margin-top:8px}
   .chart-wrap-sm{position:relative;width:100%;height:130px;margin-top:8px}
@@ -106,7 +105,7 @@
   .badge-out{background:var(--red-dim);color:var(--red)}
 
   .section-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-  .info-box{background:var(--surface2);border:0.5px solid var(--border2);border-radius:6px;padding:8px 12px;font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:12px;line-height:1.6}
+  .info-box{background:var(--surface2);border:0.5px solid var(--border);border-radius:6px;padding:8px 12px;font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:12px;line-height:1.6}
   .info-box span{color:var(--green)}
 
   .month-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:0.5px solid var(--border)}
@@ -115,7 +114,7 @@
   .month-eq{font-family:var(--mono);font-size:13px;font-weight:500;text-align:right;flex:1;padding:0 8px}
   .month-chg{font-family:var(--mono);font-size:11px;text-align:right;min-width:70px}
 
-  #toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:var(--surface2);border:0.5px solid var(--border2);color:var(--text);padding:8px 18px;border-radius:99px;font-family:var(--mono);font-size:12px;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap;z-index:999}
+  #toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--surface);padding:8px 18px;border-radius:99px;font-family:var(--mono);font-size:12px;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap;z-index:999}
   #toast.show{opacity:1}
   .empty{text-align:center;padding:2rem 1rem;color:var(--muted);font-family:var(--mono);font-size:12px;letter-spacing:.06em}
 </style>
@@ -246,28 +245,19 @@
 <div id="toast"></div>
 
 <script>
-// ★ 部署後把 Apps Script Web App 網址貼這裡 ★
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbyw2VlBZFJCTJlECC0MpsD6byjb9kxsR-VC2dNIFblVo0yvbVzf2uqH85ZBjP-VcKOToQ/exec';
 
-let eqData = { yf:[], ty:[] };
-let cfData = [];
+let eqData={yf:[],ty:[]}, cfData=[];
 let eqChart=null, mddChart=null, monthChart=null;
 let currentPeriod='1m', chartMode='yf', histTab='yf', monthTab='yf';
 
 // ── API ───────────────────────────────────────
 async function gasGet(action){
-  const res = await fetch(`${GAS_URL}?action=${action}`, {
-    redirect: 'follow',
-    mode: 'cors',
-  });
+  const res=await fetch(`${GAS_URL}?action=${action}`,{redirect:'follow'});
   return res.json();
 }
 async function gasPost(body){
-  const res = await fetch(GAS_URL, {
-    method: 'POST',
-    redirect: 'follow',
-    body: JSON.stringify(body)
-  });
+  const res=await fetch(GAS_URL,{method:'POST',redirect:'follow',body:JSON.stringify(body)});
   return res.json();
 }
 
@@ -275,17 +265,17 @@ async function gasPost(body){
 async function loadAll(){
   setSyncStatus('loading','同步中...');
   try{
-    const [eq, cf] = await Promise.all([gasGet('getEquity'), gasGet('getCashflow')]);
-    const parseV = v => parseFloat((v||'').toString().replace(/,/g,''))||0;
-    const rows = eq.rows||[];
-    eqData.yf = rows.map(r=>({date:r.date,val:parseV(r.yf_val),note:r.yf_note})).filter(r=>r.date&&r.val).sort((a,b)=>a.date.localeCompare(b.date));
-    eqData.ty = rows.map(r=>({date:r.date,val:parseV(r.ty_val),note:r.ty_note})).filter(r=>r.date&&r.val).sort((a,b)=>a.date.localeCompare(b.date));
-    cfData = (cf.rows||[]).map(r=>({date:r.date,acct:r.acct,type:r.type,val:parseV(r.val),note:r.note})).filter(r=>r.date&&r.val).sort((a,b)=>a.date.localeCompare(b.date));
+    const [eq,cf]=await Promise.all([gasGet('getEquity'),gasGet('getCashflow')]);
+    const pv=v=>parseFloat((v||'').toString().replace(/,/g,''))||0;
+    const rows=eq.rows||[];
+    eqData.yf=rows.map(r=>({date:r.date,val:pv(r.yf_val),note:r.yf_note})).filter(r=>r.date&&r.val).sort((a,b)=>a.date.localeCompare(b.date));
+    eqData.ty=rows.map(r=>({date:r.date,val:pv(r.ty_val),note:r.ty_note})).filter(r=>r.date&&r.val).sort((a,b)=>a.date.localeCompare(b.date));
+    cfData=(cf.rows||[]).map(r=>({date:r.date,acct:r.acct,type:r.type,val:pv(r.val),note:r.note})).filter(r=>r.date&&r.val).sort((a,b)=>a.date.localeCompare(b.date));
     setSyncStatus('ok','已同步 '+new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'}));
     renderCombinedSummary(); renderHistory(); renderCashflow();
     if(document.getElementById('page-chart').classList.contains('active'))renderCharts();
     if(document.getElementById('page-monthly').classList.contains('active'))renderMonthly();
-  }catch(e){ setSyncStatus('err','同步失敗'); toast('連線失敗，請確認 Apps Script 網址'); }
+  }catch(e){ setSyncStatus('err','同步失敗'); toast('連線失敗，請確認 Apps Script'); }
 }
 
 async function saveEquity(){
@@ -297,11 +287,8 @@ async function saveEquity(){
   btn.disabled=true; btn.textContent='儲存中...'; setSyncStatus('loading','儲存中...');
   try{
     const res=await gasPost({action:'saveEquity',date,yf_val:yfVal?parseFloat(yfVal):'',yf_note:document.getElementById('yf-note').value.trim(),ty_val:tyVal?parseFloat(tyVal):'',ty_note:document.getElementById('ty-note').value.trim()});
-    if(res.ok){
-      toast(res.updated?'已更新 '+date:'已儲存 '+date);
-      ['yf-val','ty-val','yf-note','ty-note'].forEach(id=>document.getElementById(id).value='');
-      await loadAll();
-    } else { toast('儲存失敗：'+res.error); }
+    if(res.ok){ toast(res.updated?'已更新 '+date:'已儲存 '+date); ['yf-val','ty-val','yf-note','ty-note'].forEach(id=>document.getElementById(id).value=''); await loadAll(); }
+    else toast('儲存失敗：'+(res.error||''));
   }catch(e){ setSyncStatus('err','儲存失敗'); toast('儲存失敗'); }
   btn.disabled=false; btn.textContent='同步至 Google Sheets';
 }
@@ -323,7 +310,6 @@ async function saveCashflow(){
 // ── UTILS ─────────────────────────────────────
 function fmtTWD(n){ if(!n)return'NT$0'; if(n>=1e6)return'NT$'+(n/1e4).toFixed(0)+'萬'; if(n>=1e4)return'NT$'+(n/1e4).toFixed(1)+'萬'; return'NT$'+Math.round(n).toLocaleString(); }
 function fmtPct(n){ return(n>=0?'+':'')+n.toFixed(2)+'%'; }
-
 function filterPeriod(arr){
   if(currentPeriod==='all')return arr;
   let c=new Date();
@@ -334,59 +320,15 @@ function filterPeriod(arr){
   const cut=c.toISOString().slice(0,10);
   return arr.filter(e=>e.date>=cut);
 }
-
-function getDayFlow(date,acctKey){
-  return cfData.filter(c=>c.acct===acctKey&&c.date===date).reduce((s,c)=>s+(c.type==='in'?c.val:-c.val),0);
-}
-function calcAdjDailyChg(cur,prev,acctKey){
-  if(!prev)return null;
-  const flow=getDayFlow(cur.date,acctKey);
-  return(cur.val-flow-prev.val)/Math.abs(prev.val)*100;
-}
-function calcTWR(eqArr,acctKey){
-  if(eqArr.length<2)return 0;
-  let twr=1;
-  for(let i=1;i<eqArr.length;i++){
-    const flow=getDayFlow(eqArr[i].date,acctKey);
-    twr*=(eqArr[i].val-flow)/Math.abs(eqArr[i-1].val);
-  }
-  return(twr-1)*100;
-}
-function calcAdjMDD(eqArr,acctKey){
-  if(!eqArr.length)return 0;
-  let peak=eqArr[0].val,mdd=0;
-  for(const e of eqArr){
-    const flow=getDayFlow(e.date,acctKey);
-    if(flow!==0)peak=e.val;
-    if(e.val>peak)peak=e.val;
-    const dd=(peak-e.val)/peak;
-    if(dd>mdd)mdd=dd;
-  }
-  return mdd;
-}
-function calcAdjMDDSeries(eqArr,acctKey){
-  if(!eqArr.length)return[];
-  let peak=eqArr[0].val;
-  return eqArr.map(e=>{
-    const flow=getDayFlow(e.date,acctKey);
-    if(flow!==0)peak=e.val;
-    if(e.val>peak)peak=e.val;
-    return peak>0?-((peak-e.val)/peak*100):0;
-  });
-}
+function getDayFlow(date,acctKey){ return cfData.filter(c=>c.acct===acctKey&&c.date===date).reduce((s,c)=>s+(c.type==='in'?c.val:-c.val),0); }
+function calcAdjDailyChg(cur,prev,acctKey){ if(!prev)return null; return(cur.val-getDayFlow(cur.date,acctKey)-prev.val)/Math.abs(prev.val)*100; }
+function calcTWR(eqArr,acctKey){ if(eqArr.length<2)return 0; let twr=1; for(let i=1;i<eqArr.length;i++){twr*=(eqArr[i].val-getDayFlow(eqArr[i].date,acctKey))/Math.abs(eqArr[i-1].val);} return(twr-1)*100; }
+function calcAdjMDD(eqArr,acctKey){ if(!eqArr.length)return 0; let peak=eqArr[0].val,mdd=0; for(const e of eqArr){const f=getDayFlow(e.date,acctKey);if(f!==0)peak=e.val;if(e.val>peak)peak=e.val;const dd=(peak-e.val)/peak;if(dd>mdd)mdd=dd;} return mdd; }
+function calcAdjMDDSeries(eqArr,acctKey){ if(!eqArr.length)return[]; let peak=eqArr[0].val; return eqArr.map(e=>{const f=getDayFlow(e.date,acctKey);if(f!==0)peak=e.val;if(e.val>peak)peak=e.val;return peak>0?-((peak-e.val)/peak*100):0;}); }
 function getMonthlyData(arr,acctKey){
-  const map={};
-  for(const e of arr){ map[e.date.slice(0,7)]=e; }
+  const map={}; for(const e of arr){ map[e.date.slice(0,7)]=e; }
   const months=Object.keys(map).sort();
-  return months.map((ym,i)=>{
-    const entry=map[ym],prevEntry=i>0?map[months[i-1]]:null;
-    let chg=null;
-    if(prevEntry){
-      const mf=cfData.filter(c=>c.acct===acctKey&&c.date.slice(0,7)===ym).reduce((s,c)=>s+(c.type==='in'?c.val:-c.val),0);
-      chg=(entry.val-mf-prevEntry.val)/Math.abs(prevEntry.val)*100;
-    }
-    return{ym,val:entry.val,chg};
-  });
+  return months.map((ym,i)=>{ const entry=map[ym],prev=i>0?map[months[i-1]]:null; let chg=null; if(prev){const mf=cfData.filter(c=>c.acct===acctKey&&c.date.slice(0,7)===ym).reduce((s,c)=>s+(c.type==='in'?c.val:-c.val),0); chg=(entry.val-mf-prev.val)/Math.abs(prev.val)*100;} return{ym,val:entry.val,chg}; });
 }
 
 // ── RENDER ────────────────────────────────────
@@ -395,8 +337,7 @@ function renderCombinedSummary(){
   const row=(key,label,color)=>{
     const d=eqData[key];
     if(!d.length)return`<div class="combined-row"><div class="combined-name"><span style="width:7px;height:7px;border-radius:50%;background:${color};display:inline-block;flex-shrink:0"></span>${label}</div><div class="combined-vals"><div class="combined-eq" style="color:var(--muted)">無資料</div></div></div>`;
-    const latest=d[d.length-1],prev=d.length>1?d[d.length-2]:null;
-    const chg=calcAdjDailyChg(latest,prev,key);
+    const latest=d[d.length-1],prev=d.length>1?d[d.length-2]:null,chg=calcAdjDailyChg(latest,prev,key);
     return`<div class="combined-row"><div class="combined-name"><span style="width:7px;height:7px;border-radius:50%;background:${color};display:inline-block;flex-shrink:0"></span>${label}</div>
       <div class="combined-vals"><div class="combined-eq">${fmtTWD(latest.val)}</div>${chg!==null?`<div class="combined-chg" style="color:${chg>=0?'var(--green)':'var(--red)'}">${fmtPct(chg)}</div>`:''}</div></div>`;
   };
@@ -408,7 +349,7 @@ function renderCombinedSummary(){
 }
 
 function renderCharts(){
-  const gc='rgba(255,255,255,0.05)',tc='#555',mf='IBM Plex Mono';
+  const gc='rgba(0,0,0,0.06)',tc='#aaa',mf='IBM Plex Mono';
   const yfF=filterPeriod(eqData.yf),tyF=filterPeriod(eqData.ty);
   const cfMarkers=(arr,acctKey)=>{
     const dateIdx=Object.fromEntries(arr.map((e,i)=>[e.date,i]));
@@ -418,7 +359,7 @@ function renderCharts(){
     flows.forEach(f=>{ if(!grouped[f.date])grouped[f.date]=[]; grouped[f.date].push(f); });
     return{label:'出入金',data:arr.map(e=>grouped[e.date]?e.val:null),
       pointRadius:arr.map(e=>grouped[e.date]?6:0),
-      pointBackgroundColor:arr.map(e=>{ if(!grouped[e.date])return'transparent'; const net=grouped[e.date].reduce((s,f)=>s+(f.type==='in'?f.val:-f.val),0); return net<0?'#ff4d4d':'#00d084'; }),
+      pointBackgroundColor:arr.map(e=>{ if(!grouped[e.date])return'transparent'; const net=grouped[e.date].reduce((s,f)=>s+(f.type==='in'?f.val:-f.val),0); return net<0?'#e03333':'#00a86b'; }),
       pointBorderColor:'#fff',pointBorderWidth:1.5,borderWidth:0,showLine:false,tension:0};
   };
   let labels,datasets;
@@ -427,11 +368,11 @@ function renderCharts(){
     labels=allDates.map(d=>d.slice(5));
     const ym=Object.fromEntries(yfF.map(e=>[e.date,e.val])),tm=Object.fromEntries(tyF.map(e=>[e.date,e.val]));
     datasets=[
-      {label:'永豐',data:allDates.map(d=>ym[d]??null),borderColor:'#00d084',backgroundColor:'rgba(0,208,132,0.08)',borderWidth:1.5,pointRadius:0,tension:0.3,fill:false,spanGaps:true},
-      {label:'統一',data:allDates.map(d=>tm[d]??null),borderColor:'#4d9fff',backgroundColor:'rgba(77,159,255,0.08)',borderWidth:1.5,pointRadius:0,tension:0.3,fill:false,spanGaps:true}
+      {label:'永豐',data:allDates.map(d=>ym[d]??null),borderColor:'#00a86b',backgroundColor:'rgba(0,168,107,0.08)',borderWidth:1.5,pointRadius:0,tension:0.3,fill:false,spanGaps:true},
+      {label:'統一',data:allDates.map(d=>tm[d]??null),borderColor:'#2080e0',backgroundColor:'rgba(32,128,224,0.08)',borderWidth:1.5,pointRadius:0,tension:0.3,fill:false,spanGaps:true}
     ];
   } else {
-    const d=chartMode==='yf'?yfF:tyF,color=chartMode==='yf'?'#00d084':'#4d9fff',bgColor=chartMode==='yf'?'rgba(0,208,132,0.15)':'rgba(77,159,255,0.15)';
+    const d=chartMode==='yf'?yfF:tyF,color=chartMode==='yf'?'#00a86b':'#2080e0',bgColor=chartMode==='yf'?'rgba(0,168,107,0.1)':'rgba(32,128,224,0.1)';
     labels=d.map(e=>e.date.slice(5));
     datasets=[{label:chartMode==='yf'?'永豐':'統一',data:d.map(e=>e.val),borderColor:color,backgroundColor:bgColor,borderWidth:1.5,pointRadius:0,tension:0.3,fill:true}];
     const mk=cfMarkers(d,chartMode); if(mk)datasets.push(mk);
@@ -440,15 +381,16 @@ function renderCharts(){
   eqChart=new Chart(document.getElementById('eqChart').getContext('2d'),{
     type:'line',data:{labels,datasets},
     options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:chartMode==='both',labels:{color:'#888',font:{family:mf,size:11},boxWidth:10,padding:12}},
-               tooltip:{callbacks:{label:(ctx)=>{ if(ctx.dataset.label==='出入金'){ const d=chartMode==='yf'?yfF:tyF,date=d[ctx.dataIndex]?.date,flows=cfData.filter(c=>c.acct===chartMode&&c.date===date); return flows.map(f=>`${f.type==='out'?'出金':'入金'} ${fmtTWD(f.val)}`); } return fmtTWD(ctx.raw); }}}},
+      plugins:{legend:{display:chartMode==='both',labels:{color:'#999',font:{family:mf,size:11},boxWidth:10,padding:12}},
+               tooltip:{callbacks:{label:(ctx)=>{ if(ctx.dataset.label==='出入金'){const d=chartMode==='yf'?yfF:tyF,date=d[ctx.dataIndex]?.date,flows=cfData.filter(c=>c.acct===chartMode&&c.date===date);return flows.map(f=>`${f.type==='out'?'出金':'入金'} ${fmtTWD(f.val)}`);} return fmtTWD(ctx.raw); }}}},
       scales:{x:{ticks:{color:tc,maxTicksLimit:6,maxRotation:0,font:{family:mf,size:10}},grid:{color:gc}},y:{ticks:{color:tc,callback:v=>v>=10000?(v/10000).toFixed(0)+'萬':v,font:{family:mf,size:10}},grid:{color:gc}}}}
   });
-  const mddKey=chartMode==='ty'?'ty':'yf',mddSrc=chartMode==='ty'?tyF:yfF,mddColor=chartMode==='ty'?'rgba(77,159,255,0.8)':'rgba(255,77,77,0.8)';
+  const mddKey=chartMode==='ty'?'ty':'yf',mddSrc=chartMode==='ty'?tyF:yfF;
+  const mddColor=chartMode==='ty'?'rgba(32,128,224,0.7)':'rgba(224,51,51,0.7)';
   const dds=calcAdjMDDSeries(mddSrc,mddKey);
   if(mddChart)mddChart.destroy();
   mddChart=new Chart(document.getElementById('mddChart').getContext('2d'),{
-    type:'line',data:{labels:mddSrc.map(e=>e.date.slice(5)),datasets:[{data:dds,borderColor:mddColor,backgroundColor:mddColor.replace('0.8','0.15'),borderWidth:1.5,pointRadius:0,fill:true,tension:0.2}]},
+    type:'line',data:{labels:mddSrc.map(e=>e.date.slice(5)),datasets:[{data:dds,borderColor:mddColor,backgroundColor:mddColor.replace('0.7','0.1'),borderWidth:1.5,pointRadius:0,fill:true,tension:0.2}]},
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:tc,maxTicksLimit:5,maxRotation:0,font:{family:mf,size:10}},grid:{color:gc}},y:{ticks:{color:tc,callback:v=>v.toFixed(1)+'%',font:{family:mf,size:10}},grid:{color:gc}}}}
   });
   const cm=document.getElementById('chart-metrics');
@@ -458,10 +400,10 @@ function renderCharts(){
 }
 
 function renderMonthly(){
-  const tc='#555',mf='IBM Plex Mono',gc='rgba(255,255,255,0.05)';
+  const tc='#aaa',mf='IBM Plex Mono',gc='rgba(0,0,0,0.06)';
   const months=getMonthlyData(eqData[monthTab],monthTab);
   if(!months.length){document.getElementById('month-table').innerHTML='<div class="empty">尚無資料</div>';return;}
-  const labels=months.map(m=>m.ym.slice(5)+'月'),chgData=months.map(m=>m.chg!==null?parseFloat(m.chg.toFixed(2)):0),colors=chgData.map(v=>v>=0?'rgba(0,208,132,0.8)':'rgba(255,77,77,0.8)');
+  const labels=months.map(m=>m.ym.slice(5)+'月'),chgData=months.map(m=>m.chg!==null?parseFloat(m.chg.toFixed(2)):0),colors=chgData.map(v=>v>=0?'rgba(0,168,107,0.8)':'rgba(224,51,51,0.8)');
   if(monthChart)monthChart.destroy();
   monthChart=new Chart(document.getElementById('monthChart').getContext('2d'),{type:'bar',data:{labels,datasets:[{data:chgData,backgroundColor:colors,borderRadius:3,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:tc,font:{family:mf,size:10},maxRotation:0},grid:{color:gc}},y:{ticks:{color:tc,callback:v=>v.toFixed(1)+'%',font:{family:mf,size:10}},grid:{color:gc}}}}});
   document.getElementById('month-table').innerHTML=[...months].reverse().map(m=>`<div class="month-row"><div class="month-label">${m.ym.replace('-','/')}</div><div class="month-eq">${fmtTWD(m.val)}</div><div class="month-chg" style="color:${m.chg===null?'var(--muted)':m.chg>=0?'var(--green)':'var(--red)'}">${m.chg!==null?fmtPct(m.chg):'-'}</div></div>`).join('');
@@ -488,15 +430,7 @@ function renderCashflow(){
 }
 
 // ── UI ────────────────────────────────────────
-function switchTab(name){
-  const tabs=['today','chart','monthly','history','cashflow'];
-  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',tabs[i]===name));
-  document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id==='page-'+name));
-  if(name==='chart')renderCharts();
-  if(name==='monthly')renderMonthly();
-  if(name==='history')renderHistory();
-  if(name==='cashflow')renderCashflow();
-}
+function switchTab(name){ const tabs=['today','chart','monthly','history','cashflow']; document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',tabs[i]===name)); document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id==='page-'+name)); if(name==='chart')renderCharts(); if(name==='monthly')renderMonthly(); if(name==='history')renderHistory(); if(name==='cashflow')renderCashflow(); }
 function setPeriod(p,btn){ currentPeriod=p; document.querySelectorAll('.pbtn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); renderCharts(); }
 function setChartMode(mode){ chartMode=mode; document.getElementById('ct-yf').className='ctbtn'+(mode==='yf'?' on-yf':''); document.getElementById('ct-ty').className='ctbtn'+(mode==='ty'?' on-ty':''); document.getElementById('ct-both').className='ctbtn'+(mode==='both'?' on-both':''); renderCharts(); }
 function setHistTab(tab){ histTab=tab; document.getElementById('ht-yf').className='ctbtn'+(tab==='yf'?' on-yf':''); document.getElementById('ht-ty').className='ctbtn'+(tab==='ty'?' on-ty':''); renderHistory(); }
@@ -504,7 +438,6 @@ function setMonthTab(tab){ monthTab=tab; document.getElementById('mt-yf').classN
 function setSyncStatus(state,text){ document.getElementById('sync-dot').className='sync-dot '+state; document.getElementById('sync-text').textContent=text; }
 function toast(msg){ const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); setTimeout(()=>el.classList.remove('show'),2200); }
 
-// ── INIT ──────────────────────────────────────
 const t=new Date().toISOString().slice(0,10);
 document.getElementById('eq-date').value=t;
 document.getElementById('cf-date').value=t;
