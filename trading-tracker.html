@@ -122,7 +122,7 @@
 <body>
 <div id="app">
   <div class="header">
-    <div class="header-logo">TRACKER <span style="font-size:9px;color:var(--muted);letter-spacing:.05em">v1.1</span></div>
+    <div class="header-logo">TRACKER <span style="font-size:9px;color:var(--muted);letter-spacing:.05em">v1.3</span></div>
     <div class="header-sub">台指期 · Algo</div>
   </div>
   <div class="tabs">
@@ -199,6 +199,13 @@
     </div>
     <div class="card">
       <div class="card-title">月度明細 <span style="font-size:10px;color:var(--muted);font-weight:400">（已排除出入金）</span></div>
+      <div style="display:flex;justify-content:space-between;padding:0 0 6px 0;border-bottom:0.5px solid var(--border);margin-bottom:4px">
+        <div style="font-family:var(--mono);font-size:10px;color:var(--muted);min-width:55px">月份</div>
+        <div style="font-family:var(--mono);font-size:10px;color:var(--muted);text-align:right;flex:1;padding:0 4px">帳戶金額</div>
+        <div style="font-family:var(--mono);font-size:10px;color:var(--muted);text-align:right;min-width:65px">月增金額</div>
+        <div style="font-family:var(--mono);font-size:10px;color:var(--muted);text-align:right;min-width:55px">出入金</div>
+        <div style="font-family:var(--mono);font-size:10px;color:var(--muted);text-align:right;min-width:60px">月增減</div>
+      </div>
       <div id="month-table"></div>
     </div>
   </div>
@@ -213,6 +220,12 @@
       <div class="chart-toggle" style="margin-bottom:12px">
         <button class="ctbtn on-yf" id="ht-yf" onclick="setHistTab('yf')">永豐</button>
         <button class="ctbtn" id="ht-ty" onclick="setHistTab('ty')">統一</button>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:0 0 6px 0;border-bottom:0.5px solid var(--border);margin-bottom:4px">
+        <div style="font-family:var(--mono);font-size:10px;color:var(--muted);flex:1">日期</div>
+        <div style="font-family:var(--mono);font-size:10px;color:var(--muted);text-align:right;min-width:70px">帳戶金額</div>
+        <div style="font-family:var(--mono);font-size:10px;color:var(--muted);text-align:right;min-width:65px">日增金額</div>
+        <div style="font-family:var(--mono);font-size:10px;color:var(--muted);text-align:right;min-width:55px">日增減</div>
       </div>
       <div id="history-list"></div>
     </div>
@@ -452,15 +465,21 @@ function renderMonthly(){
   const labels=months.map(m=>m.ym.slice(5)+'月'),chgData=months.map(m=>m.chg!==null?parseFloat(m.chg.toFixed(2)):0),colors=chgData.map(v=>v>=0?'rgba(0,168,107,0.8)':'rgba(224,51,51,0.8)');
   if(monthChart)monthChart.destroy();
   monthChart=new Chart(document.getElementById('monthChart').getContext('2d'),{type:'bar',data:{labels,datasets:[{data:chgData,backgroundColor:colors,borderRadius:3,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:tc,font:{family:mf,size:10},maxRotation:0},grid:{color:gc}},y:{ticks:{color:tc,callback:v=>v.toFixed(1)+'%',font:{family:mf,size:10}},grid:{color:gc}}}}});
-  document.getElementById('month-table').innerHTML=[...months].reverse().map(m=>{
+  document.getElementById('month-table').innerHTML=[...months].reverse().map((m,ri,rev)=>{
     const mf=cfData.filter(c=>c.acct===monthTab&&c.date.slice(0,7)===m.ym);
     const mfNet=mf.reduce((s,c)=>s+(c.type==='in'?c.val:-c.val),0);
     const mfLabel=mf.length===0?'':mfNet>0?`<span style="color:var(--green);font-size:10px">+${fmtTWD(mfNet)}</span>`:`<span style="color:var(--red);font-size:10px">${fmtTWD(mfNet)}</span>`;
-    return `<div class="month-row">
-      <div class="month-label">${m.ym.replace('-','/')}</div>
-      <div class="month-eq">${fmtTWD(m.val)}</div>
-      <div style="text-align:right;min-width:60px">${mfLabel}</div>
-      <div class="month-chg" style="color:${m.chg===null?'var(--muted)':m.chg>=0?'var(--green)':'var(--red)'}">${m.chg!==null?fmtPct(m.chg):'-'}</div>
+    // 月增金額：本月帳戶金額 - 上月帳戶金額 - 本月淨入金
+    const prevM=ri<rev.length-1?rev[ri+1]:null;
+    const prevVal=prevM?prevM.val:null;
+    const monthDiff=prevVal!==null?(m.val - mfNet - prevVal):null;
+    const diffLabel=monthDiff!==null?(monthDiff>=0?`<span style="color:var(--green)">${fmtTWD(monthDiff)}</span>`:`<span style="color:var(--red)">${fmtTWD(monthDiff)}</span>`):'<span style="color:var(--muted)">-</span>';
+    return `<div class="month-row" style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:0.5px solid var(--border)">
+      <div style="font-family:var(--mono);font-size:12px;color:var(--muted);min-width:55px">${m.ym.replace('-','/')}</div>
+      <div style="font-family:var(--mono);font-size:13px;font-weight:500;text-align:right;flex:1;padding:0 4px">${fmtTWD(m.val)}</div>
+      <div style="font-family:var(--mono);font-size:11px;text-align:right;min-width:65px">${diffLabel}</div>
+      <div style="font-family:var(--mono);font-size:11px;text-align:right;min-width:55px">${mfLabel||'<span style="color:var(--muted)">-</span>'}</div>
+      <div style="font-family:var(--mono);font-size:11px;text-align:right;min-width:60px;color:${m.chg===null?'var(--muted)':m.chg>=0?'var(--green)':'var(--red)'}">${m.chg!==null?fmtPct(m.chg):'-'}</div>
     </div>`;
   }).join('');
 }
@@ -474,7 +493,20 @@ function renderHistory(){
   el.innerHTML=list.map((e,i)=>{
     const prev=list[i+1],chg=calcAdjDailyChg(e,prev,histTab),flows=cfMap.get(e.date)||[];
     const flowBadge=flows.map(f=>`<span class="badge ${f.type==='out'?'badge-out':'badge-in'}" style="margin-left:4px">${f.type==='out'?'出金':'入金'} ${fmtTWD(f.val)}</span>`).join('');
-    return`<div class="record"><div class="record-left"><div style="display:flex;align-items:center;flex-wrap:wrap;gap:2px"><span class="record-date">${e.date}</span>${flowBadge}</div>${e.note?`<div class="record-note">${e.note}</div>`:''}</div><div class="record-right"><div class="record-val">${fmtTWD(e.val)}</div>${chg!==null?`<div class="record-chg" style="color:${chg>=0?'var(--green)':'var(--red)'}">${fmtPct(chg)}</div>`:''}</div></div>`;
+    // 日增金額：今日帳戶 - 出入金淨額 - 昨日帳戶
+    const dayFlow=getDayFlow(e.date,histTab);
+    const dayDiff=prev?(e.val-dayFlow-prev.val):null;
+    const dayDiffLabel=dayDiff!==null?(dayDiff>=0?`<span style="color:var(--green);font-size:11px;font-family:var(--mono)">${fmtTWD(dayDiff)}</span>`:`<span style="color:var(--red);font-size:11px;font-family:var(--mono)">${fmtTWD(dayDiff)}</span>`):'';
+    return`<div class="record" style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:0.5px solid var(--border)">
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;flex-wrap:wrap;gap:2px"><span class="record-date">${e.date}</span>${flowBadge}</div>
+        ${e.note?`<div class="record-note">${e.note}</div>`:''}
+      </div>
+      <div style="font-family:var(--mono);font-size:13px;font-weight:500;text-align:right;min-width:70px;margin-left:6px">${fmtTWD(e.val)}</div>
+      <div style="text-align:right;min-width:65px;margin-left:4px">${dayDiffLabel}</div>
+      <div style="text-align:right;min-width:55px;margin-left:4px">${chg!==null?`<span style="font-family:var(--mono);font-size:11px;color:${chg>=0?'var(--green)':'var(--red)'}">${fmtPct(chg)}</span>`:''}
+      </div>
+    </div>`;
   }).join('');
 }
 
