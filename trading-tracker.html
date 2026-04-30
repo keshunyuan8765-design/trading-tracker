@@ -40,7 +40,7 @@
   .header-user{font-size:11px;color:var(--muted);cursor:pointer;font-family:var(--mono)}
 
   .tabs{display:flex;border-bottom:0.5px solid var(--border);background:var(--bg);position:sticky;top:45px;z-index:99}
-  .tab{flex:1;padding:11px 4px;font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-align:center;color:var(--muted);cursor:pointer;border-bottom:1.5px solid transparent;transition:color .15s,border-color .15s;text-transform:uppercase}
+  .tab{flex:1;padding:11px 2px;font-family:var(--mono);font-size:10px;letter-spacing:.04em;text-align:center;color:var(--muted);cursor:pointer;border-bottom:1.5px solid transparent;transition:color .15s,border-color .15s;text-transform:uppercase}
   .tab.active{color:var(--green);border-bottom-color:var(--green)}
 
   .page{display:none;padding:14px;padding-bottom:40px}
@@ -120,7 +120,9 @@
 
   .section-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
 
-  /* Monthly table */
+  .info-box{background:var(--surface2);border:0.5px solid var(--border2);border-radius:6px;padding:8px 12px;font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:12px;line-height:1.6}
+  .info-box span{color:var(--green)}
+
   .month-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:0.5px solid var(--border)}
   .month-row:last-child{border-bottom:none}
   .month-label{font-family:var(--mono);font-size:12px;color:var(--muted);min-width:50px}
@@ -202,12 +204,14 @@
         <button class="ctbtn" id="ct-both" onclick="setChartMode('both')">合併對比</button>
       </div>
       <div class="chart-wrap"><canvas id="eqChart" role="img" aria-label="帳戶權益歷史折線圖">權益歷史圖表</canvas></div>
+      <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:6px">● 紅點 = 出金  ● 綠點 = 入金</div>
     </div>
     <div class="metrics-grid" id="chart-metrics"></div>
     <div class="card">
-      <div class="card-title">最大回撤 MDD</div>
+      <div class="card-title">最大回撤 MDD <span style="font-size:10px;color:var(--muted);font-weight:400">（已排除出入金影響）</span></div>
       <div class="chart-wrap-sm"><canvas id="mddChart" role="img" aria-label="最大回撤圖">MDD圖</canvas></div>
     </div>
+    <div class="info-box">報酬率採 <span>TWR（時間加權報酬）</span>，出入金不影響績效計算。MDD 在出入金點重設基準。</div>
   </div>
 
   <!-- MONTHLY -->
@@ -290,13 +294,9 @@ let monthTab = 'yf';
 
 // ── TOKEN ─────────────────────────────────────────────
 function saveToken(t){ localStorage.setItem(TOKEN_KEY,t); localStorage.setItem(TOKEN_EXP_KEY,(Date.now()+55*60*1000).toString()); }
-function loadToken(){ const t=localStorage.getItem(TOKEN_KEY),e=parseInt(localStorage.getItem(TOKEN_EXP_KEY)||'0'); return (t&&Date.now()<e)?t:null; }
+function loadToken(){ const t=localStorage.getItem(TOKEN_KEY),e=parseInt(localStorage.getItem(TOKEN_EXP_KEY)||'0'); return(t&&Date.now()<e)?t:null; }
 function clearToken(){ localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(TOKEN_EXP_KEY); }
-function scheduleRefresh(){
-  const e=parseInt(localStorage.getItem(TOKEN_EXP_KEY)||'0');
-  const ms=e-Date.now()-5*60*1000;
-  if(ms>0) setTimeout(()=>window._tokenClient.requestAccessToken({prompt:''}),ms);
-}
+function scheduleRefresh(){ const e=parseInt(localStorage.getItem(TOKEN_EXP_KEY)||'0'),ms=e-Date.now()-5*60*1000; if(ms>0)setTimeout(()=>window._tokenClient.requestAccessToken({prompt:''}),ms); }
 
 // ── AUTH ──────────────────────────────────────────────
 function initGSI(){
@@ -304,14 +304,7 @@ function initGSI(){
   google.accounts.id.renderButton(document.getElementById('g-signin-btn'),{theme:'filled_black',size:'large',text:'signin_with',shape:'pill',width:260});
   window._tokenClient=google.accounts.oauth2.initTokenClient({
     client_id:CLIENT_ID,scope:SCOPES,
-    callback:(resp)=>{
-      if(resp.access_token){
-        accessToken=resp.access_token;
-        saveToken(accessToken); scheduleRefresh();
-        showApp();
-        initSheets().then(()=>{ loadFromSheets(); loadCashflowFromSheets(); });
-      }
-    }
+    callback:(resp)=>{ if(resp.access_token){ accessToken=resp.access_token; saveToken(accessToken); scheduleRefresh(); showApp(); initSheets().then(()=>{ loadFromSheets(); loadCashflowFromSheets(); }); } }
   });
   const saved=loadToken();
   if(saved){ accessToken=saved; scheduleRefresh(); showApp(); initSheets().then(()=>{ loadFromSheets(); loadCashflowFromSheets(); }); }
@@ -342,7 +335,6 @@ async function initSheets(){
   }catch(e){ if(e.message!=='401')toast('Sheet 初始化失敗'); }
 }
 
-// ── LOAD ──────────────────────────────────────────────
 const parseVal=v=>parseFloat((v||'').toString().replace(/,/g,''))||0;
 
 async function loadFromSheets(){
@@ -382,7 +374,7 @@ async function saveEquity(){
 async function loadCashflowFromSheets(){
   try{
     const res=await api('GET',`/values/${CF_SHEET}!A2:E2000`);
-    cfData=(res.values||[]).map(r=>({date:r[0]||'',acct:r[1]||'yf',type:r[2]||'in',val:parseVal(r[3]),note:r[4]||''})).filter(r=>r.date&&r.val).sort((a,b)=>b.date.localeCompare(a.date));
+    cfData=(res.values||[]).map(r=>({date:r[0]||'',acct:r[1]||'yf',type:r[2]||'in',val:parseVal(r[3]),note:r[4]||''})).filter(r=>r.date&&r.val).sort((a,b)=>a.date.localeCompare(b.date));
     renderCashflow();
   }catch(e){}
 }
@@ -403,34 +395,77 @@ async function saveCashflow(){
 // ── UTILS ─────────────────────────────────────────────
 function fmtTWD(n){ if(!n)return'NT$0'; if(n>=1e6)return'NT$'+(n/1e4).toFixed(0)+'萬'; if(n>=1e4)return'NT$'+(n/1e4).toFixed(1)+'萬'; return'NT$'+Math.round(n).toLocaleString(); }
 function fmtPct(n){ return(n>=0?'+':'')+n.toFixed(2)+'%'; }
-function calcMDD(vals){ let peak=vals[0]||0,mdd=0; for(const v of vals){if(v>peak)peak=v;const dd=(peak-v)/peak;if(dd>mdd)mdd=dd;} return mdd; }
 
 function filterPeriod(arr){
   if(currentPeriod==='all')return arr;
   let cutoff=new Date();
-  if(currentPeriod==='1m') cutoff.setMonth(cutoff.getMonth()-1);
-  else if(currentPeriod==='3m') cutoff.setMonth(cutoff.getMonth()-3);
-  else if(currentPeriod==='1y') cutoff.setFullYear(cutoff.getFullYear()-1);
-  else if(currentPeriod==='ytd') cutoff=new Date(new Date().getFullYear(),0,1);
+  if(currentPeriod==='1m')cutoff.setMonth(cutoff.getMonth()-1);
+  else if(currentPeriod==='3m')cutoff.setMonth(cutoff.getMonth()-3);
+  else if(currentPeriod==='1y')cutoff.setFullYear(cutoff.getFullYear()-1);
+  else if(currentPeriod==='ytd')cutoff=new Date(new Date().getFullYear(),0,1);
   const c=cutoff.toISOString().slice(0,10);
   return arr.filter(e=>e.date>=c);
 }
 
-// Monthly aggregation: last record of each month
+// ── TWR 計算 ──────────────────────────────────────────
+// 把出入金當分段點，每段算 sub-period return，然後連乘
+function calcTWR(eqArr, cfArr, acctKey){
+  if(eqArr.length<2)return 0;
+  // 取該帳戶的出入金，依日期排序
+  const flows=cfArr.filter(c=>c.acct===acctKey).sort((a,b)=>a.date.localeCompare(b.date));
+  // 建立分段：每個出入金日期為分段點
+  const breakDates=new Set(flows.map(f=>f.date));
+  let twr=1;
+  let segStart=eqArr[0];
+  for(let i=1;i<eqArr.length;i++){
+    const cur=eqArr[i];
+    const prev=eqArr[i-1];
+    if(breakDates.has(cur.date)){
+      // 這天有出入金：先算到前一天的報酬
+      const segRet=prev.val/segStart.val;
+      twr*=segRet;
+      // 新段從這天開始（出入金後的權益）
+      segStart=cur;
+    }
+  }
+  // 最後一段
+  const lastRet=eqArr[eqArr.length-1].val/segStart.val;
+  twr*=lastRet;
+  return (twr-1)*100;
+}
+
+// ── MDD 排除出入金 ────────────────────────────────────
+// 出入金日重設 peak，避免出金造成的下跌被算進 MDD
+function calcAdjustedMDD(eqArr, cfArr, acctKey){
+  if(!eqArr.length)return 0;
+  const flowDates=new Set(cfArr.filter(c=>c.acct===acctKey).map(f=>f.date));
+  let peak=eqArr[0].val, mdd=0;
+  for(const e of eqArr){
+    if(flowDates.has(e.date)) peak=e.val; // 重設 peak
+    if(e.val>peak) peak=e.val;
+    const dd=(peak-e.val)/peak;
+    if(dd>mdd) mdd=dd;
+  }
+  return mdd;
+}
+
+// MDD 序列（用於圖表）
+function calcAdjustedMDDSeries(eqArr, cfArr, acctKey){
+  if(!eqArr.length)return[];
+  const flowDates=new Set(cfArr.filter(c=>c.acct===acctKey).map(f=>f.date));
+  let peak=eqArr[0].val;
+  return eqArr.map(e=>{
+    if(flowDates.has(e.date)) peak=e.val;
+    if(e.val>peak) peak=e.val;
+    return peak>0?-((peak-e.val)/peak*100):0;
+  });
+}
+
 function getMonthlyData(arr){
   const map={};
-  for(const e of arr){
-    const ym=e.date.slice(0,7); // "2026-01"
-    map[ym]=e.val; // overwrite → last record of month wins
-  }
+  for(const e of arr){ const ym=e.date.slice(0,7); map[ym]=e.val; }
   const months=Object.keys(map).sort();
-  return months.map((ym,i)=>{
-    const val=map[ym];
-    const prevYm=months[i-1];
-    const prevVal=prevYm?map[prevYm]:null;
-    const chg=prevVal!==null?((val-prevVal)/Math.abs(prevVal)*100):null;
-    return{ym,val,chg};
-  });
+  return months.map((ym,i)=>{ const val=map[ym],prevYm=months[i-1],prevVal=prevYm?map[prevYm]:null,chg=prevVal!==null?((val-prevVal)/Math.abs(prevVal)*100):null; return{ym,val,chg}; });
 }
 
 // ── RENDER ────────────────────────────────────────────
@@ -454,6 +489,26 @@ function renderCombinedSummary(){
 function renderCharts(){
   const gc='rgba(255,255,255,0.05)',tc='#555',mf='IBM Plex Mono';
   const yfF=filterPeriod(eqData.yf),tyF=filterPeriod(eqData.ty);
+
+  // cashflow markers for each account within period
+  const cfMarkers=(arr,acctKey,color)=>{
+    const flows=cfData.filter(c=>c.acct===acctKey&&arr.some(e=>e.date===c.date));
+    if(!flows.length)return null;
+    const dateIndex=Object.fromEntries(arr.map((e,i)=>[e.date,i]));
+    const pts=flows.map(f=>({x:dateIndex[f.date],y:arr[dateIndex[f.date]]?.val,type:f.type,val:f.val})).filter(p=>p.y!=null);
+    return{
+      label:'出入金',
+      data:arr.map((_,i)=>{ const p=pts.find(p=>p.x===i); return p?p.y:null; }),
+      pointRadius:arr.map((_,i)=>pts.find(p=>p.x===i)?6:0),
+      pointBackgroundColor:arr.map((_,i)=>{ const p=pts.find(q=>q.x===i); return p?(p.type==='out'?'#ff4d4d':'#00d084'):'transparent'; }),
+      pointBorderColor:'#fff',
+      pointBorderWidth:1.5,
+      borderWidth:0,
+      showLine:false,
+      tension:0,
+    };
+  };
+
   let labels,datasets;
   if(chartMode==='both'){
     const allDates=[...new Set([...yfF.map(e=>e.date),...tyF.map(e=>e.date)])].sort();
@@ -464,23 +519,41 @@ function renderCharts(){
       {label:'永豐',data:allDates.map(d=>ym[d]??null),borderColor:'#00d084',backgroundColor:'rgba(0,208,132,0.08)',borderWidth:1.5,pointRadius:0,tension:0.3,fill:false,spanGaps:true},
       {label:'統一',data:allDates.map(d=>tm[d]??null),borderColor:'#4d9fff',backgroundColor:'rgba(77,159,255,0.08)',borderWidth:1.5,pointRadius:0,tension:0.3,fill:false,spanGaps:true}
     ];
-  }else{
-    const d=chartMode==='yf'?yfF:tyF,color=chartMode==='yf'?'#00d084':'#4d9fff';
+  } else {
+    const d=chartMode==='yf'?yfF:tyF;
+    const color=chartMode==='yf'?'#00d084':'#4d9fff';
+    const bgColor=chartMode==='yf'?'rgba(0,208,132,0.15)':'rgba(77,159,255,0.15)';
     labels=d.map(e=>e.date.slice(5));
-    datasets=[{label:chartMode==='yf'?'永豐':'統一',data:d.map(e=>e.val),borderColor:color,backgroundColor:color==='#00d084'?'rgba(0,208,132,0.15)':'rgba(77,159,255,0.15)',borderWidth:1.5,pointRadius:d.length>60?0:2,tension:0.3,fill:true}];
+    datasets=[
+      {label:chartMode==='yf'?'永豐':'統一',data:d.map(e=>e.val),borderColor:color,backgroundColor:bgColor,borderWidth:1.5,pointRadius:0,tension:0.3,fill:true}
+    ];
+    const mk=cfMarkers(d,chartMode,color);
+    if(mk)datasets.push(mk);
   }
+
   if(eqChart)eqChart.destroy();
   eqChart=new Chart(document.getElementById('eqChart').getContext('2d'),{
     type:'line',data:{labels,datasets},
     options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:chartMode==='both',labels:{color:'#888',font:{family:mf,size:11},boxWidth:10,padding:12}}},
+      plugins:{legend:{display:chartMode==='both',labels:{color:'#888',font:{family:mf,size:11},boxWidth:10,padding:12}},
+               tooltip:{callbacks:{label:(ctx)=>{
+                 if(ctx.dataset.label==='出入金'){
+                   const d=chartMode==='yf'?yfF:tyF;
+                   const date=d[ctx.dataIndex]?.date;
+                   const flows=cfData.filter(c=>c.acct===chartMode&&c.date===date);
+                   return flows.map(f=>`${f.type==='out'?'出金':'入金'} ${fmtTWD(f.val)}`);
+                 }
+                 return fmtTWD(ctx.raw);
+               }}}},
       scales:{x:{ticks:{color:tc,maxTicksLimit:6,maxRotation:0,font:{family:mf,size:10}},grid:{color:gc}},
               y:{ticks:{color:tc,callback:v=>v>=10000?(v/10000).toFixed(0)+'萬':v,font:{family:mf,size:10}},grid:{color:gc}}}}
   });
 
-  const mddSrc=chartMode==='ty'?tyF:yfF,mddColor=chartMode==='ty'?'rgba(77,159,255,0.8)':'rgba(255,77,77,0.8)';
-  let peak=mddSrc[0]?.val||0;
-  const dds=mddSrc.map(e=>{ if(e.val>peak)peak=e.val; return peak>0?-((peak-e.val)/peak*100):0; });
+  // MDD with cashflow adjustment
+  const mddKey=chartMode==='ty'?'ty':'yf';
+  const mddSrc=chartMode==='ty'?tyF:yfF;
+  const mddColor=chartMode==='ty'?'rgba(77,159,255,0.8)':'rgba(255,77,77,0.8)';
+  const dds=calcAdjustedMDDSeries(mddSrc,cfData,mddKey);
   if(mddChart)mddChart.destroy();
   mddChart=new Chart(document.getElementById('mddChart').getContext('2d'),{
     type:'line',
@@ -490,18 +563,24 @@ function renderCharts(){
               y:{ticks:{color:tc,callback:v=>v.toFixed(1)+'%',font:{family:mf,size:10}},grid:{color:gc}}}}
   });
 
+  // Metrics with TWR
   const cm=document.getElementById('chart-metrics');
-  const block=(d,label,color)=>{
+  const block=(d,acctKey,label,color)=>{
     if(!d.length)return'';
-    const vals=d.map(e=>e.val),ret=vals.length>1?((vals[vals.length-1]-vals[0])/Math.abs(vals[0])*100):0,mdd=calcMDD(vals);
-    return`<div class="metric"><div class="metric-label" style="color:${color}">${label} 報酬</div><div class="metric-value ${ret>=0?'pos':'neg'}">${fmtPct(ret)}</div></div>
-           <div class="metric"><div class="metric-label" style="color:${color}">${label} MDD</div><div class="metric-value neg">-${(mdd*100).toFixed(2)}%</div></div>`;
+    const twr=calcTWR(d,cfData,acctKey);
+    const mdd=calcAdjustedMDD(d,cfData,acctKey);
+    return`<div class="metric"><div class="metric-label" style="color:${color}">${label} TWR</div><div class="metric-value ${twr>=0?'pos':'neg'}">${fmtPct(twr)}</div><div class="metric-sub">時間加權報酬</div></div>
+           <div class="metric"><div class="metric-label" style="color:${color}">${label} MDD</div><div class="metric-value neg">-${(mdd*100).toFixed(2)}%</div><div class="metric-sub">排除出入金</div></div>`;
   };
-  if(chartMode==='both'){ cm.innerHTML=block(yfF,'永豐','var(--green)')+block(tyF,'統一','var(--blue)'); }
-  else{
-    const d=chartMode==='yf'?yfF:tyF,label=chartMode==='yf'?'永豐':'統一',color=chartMode==='yf'?'var(--green)':'var(--blue)';
-    cm.innerHTML=block(d,label,color)+`<div class="metric"><div class="metric-label">最高權益</div><div class="metric-value">${d.length?fmtTWD(Math.max(...d.map(e=>e.val))):'-'}</div></div>
-      <div class="metric"><div class="metric-label">資料筆數</div><div class="metric-value">${d.length}</div></div>`;
+  if(chartMode==='both'){
+    cm.innerHTML=block(yfF,'yf','永豐','var(--green)')+block(tyF,'ty','統一','var(--blue)');
+  } else {
+    const d=chartMode==='yf'?yfF:tyF;
+    const label=chartMode==='yf'?'永豐':'統一';
+    const color=chartMode==='yf'?'var(--green)':'var(--blue)';
+    cm.innerHTML=block(d,chartMode,label,color)+
+      `<div class="metric"><div class="metric-label">最高權益</div><div class="metric-value">${d.length?fmtTWD(Math.max(...d.map(e=>e.val))):'-'}</div></div>
+       <div class="metric"><div class="metric-label">資料筆數</div><div class="metric-value">${d.length}</div></div>`;
   }
 }
 
@@ -509,21 +588,17 @@ function renderMonthly(){
   const tc='#555',mf='IBM Plex Mono',gc='rgba(255,255,255,0.05)';
   const d=eqData[monthTab];
   const months=getMonthlyData(d);
-  if(!months.length){ document.getElementById('month-table').innerHTML='<div class="empty">尚無資料</div>'; return; }
-
+  if(!months.length){document.getElementById('month-table').innerHTML='<div class="empty">尚無資料</div>';return;}
   const labels=months.map(m=>m.ym.slice(5)+'月');
   const chgData=months.map(m=>m.chg!==null?parseFloat(m.chg.toFixed(2)):0);
   const colors=chgData.map(v=>v>=0?'rgba(0,208,132,0.8)':'rgba(255,77,77,0.8)');
-
   if(monthChart)monthChart.destroy();
   monthChart=new Chart(document.getElementById('monthChart').getContext('2d'),{
-    type:'bar',
-    data:{labels,datasets:[{data:chgData,backgroundColor:colors,borderRadius:3,borderSkipped:false}]},
+    type:'bar',data:{labels,datasets:[{data:chgData,backgroundColor:colors,borderRadius:3,borderSkipped:false}]},
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
       scales:{x:{ticks:{color:tc,font:{family:mf,size:10},maxRotation:0},grid:{color:gc}},
               y:{ticks:{color:tc,callback:v=>v.toFixed(1)+'%',font:{family:mf,size:10}},grid:{color:gc}}}}
   });
-
   const el=document.getElementById('month-table');
   el.innerHTML=[...months].reverse().map(m=>`
     <div class="month-row">
@@ -539,17 +614,26 @@ function renderHistory(){
   const el=document.getElementById('history-list');
   const list=[...eqData[histTab]].reverse();
   if(!list.length){el.innerHTML='<div class="empty">尚無資料</div>';return;}
+  // cashflow dates for this account
+  const cfDates=new Map();
+  cfData.filter(c=>c.acct===histTab).forEach(c=>{ if(!cfDates.has(c.date))cfDates.set(c.date,[]); cfDates.get(c.date).push(c); });
   el.innerHTML=list.map((e,i)=>{
     const prev=list[i+1],chg=prev?((e.val-prev.val)/Math.abs(prev.val)*100):null;
-    return`<div class="record"><div class="record-left"><div class="record-date">${e.date}</div>${e.note?`<div class="record-note">${e.note}</div>`:''}</div>
+    const flows=cfDates.get(e.date)||[];
+    const flowBadge=flows.map(f=>`<span class="badge ${f.type==='out'?'badge-out':'badge-in'}" style="margin-left:4px">${f.type==='out'?'出金':'入金'} ${fmtTWD(f.val)}</span>`).join('');
+    return`<div class="record"><div class="record-left">
+        <div style="display:flex;align-items:center;flex-wrap:wrap;gap:2px"><span class="record-date">${e.date}</span>${flowBadge}</div>
+        ${e.note?`<div class="record-note">${e.note}</div>`:''}
+      </div>
       <div class="record-right"><div class="record-val">${fmtTWD(e.val)}</div>${chg!==null?`<div class="record-chg" style="color:${chg>=0?'var(--green)':'var(--red)'}">${fmtPct(chg)}</div>`:''}</div></div>`;
   }).join('');
 }
 
 function renderCashflow(){
   const el=document.getElementById('cf-list');
-  if(!cfData.length){el.innerHTML='<div class="empty">尚無出入金紀錄</div>';return;}
-  el.innerHTML=cfData.map(c=>`<div class="record">
+  const list=[...cfData].reverse();
+  if(!list.length){el.innerHTML='<div class="empty">尚無出入金紀錄</div>';return;}
+  el.innerHTML=list.map(c=>`<div class="record">
     <div class="record-left">
       <div style="display:flex;align-items:center;gap:5px;margin-bottom:3px">
         <span class="badge ${c.acct==='yf'?'badge-yf':'badge-ty'}">${c.acct==='yf'?'永豐':'統一'}</span>
