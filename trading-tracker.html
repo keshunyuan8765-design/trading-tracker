@@ -122,7 +122,7 @@
 <body>
 <div id="app">
   <div class="header">
-    <div class="header-logo">TRACKER <span style="font-size:9px;color:var(--muted);letter-spacing:.05em">v1.3</span></div>
+    <div class="header-logo">TRACKER <span style="font-size:9px;color:var(--muted);letter-spacing:.05em">v1.4</span></div>
     <div class="header-sub">台指期 · Algo</div>
   </div>
   <div class="tabs">
@@ -173,6 +173,10 @@
         <button class="ctbtn on-yf" id="ct-yf" onclick="setChartMode('yf')">永豐</button>
         <button class="ctbtn" id="ct-ty" onclick="setChartMode('ty')">統一</button>
         <button class="ctbtn" id="ct-both" onclick="setChartMode('both')">合併對比</button>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div id="peak-distance" style="font-family:var(--mono);font-size:11px;color:var(--muted)"></div>
+        <button class="pbtn" id="yaxis-toggle" onclick="toggleYAxis()" style="font-size:10px;padding:3px 10px">% 切換</button>
       </div>
       <div class="chart-wrap"><canvas id="eqChart"></canvas></div>
       <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:6px">● 紅點 = 出金 &nbsp; ● 綠點 = 入金</div>
@@ -262,7 +266,7 @@ const GAS_URL = 'https://script.google.com/macros/s/AKfycbyw2VlBZFJCTJlECC0MpsD6
 
 let eqData={yf:[],ty:[]}, cfData=[];
 let eqChart=null, mddChart=null, monthChart=null;
-let currentPeriod='1m', chartMode='yf', histTab='yf', monthTab='yf';
+let currentPeriod='1m', chartMode='yf', histTab='yf', monthTab='yf', yAxisMode='amount';
 
 // ── API ───────────────────────────────────────
 function gasGet(action){
@@ -409,7 +413,8 @@ function renderCharts(){
     if(!flows.length)return null;
     const grouped={};
     flows.forEach(f=>{ if(!grouped[f.date])grouped[f.date]=[]; grouped[f.date].push(f); });
-    return{label:'出入金',data:arr.map(e=>grouped[e.date]?e.val:null),
+    const _initVal=arr.length?arr[0].val:1;const _toY=(v)=>yAxisMode==='pct'?((v-_initVal)/_initVal*100):v;
+    return{label:'出入金',data:arr.map(e=>grouped[e.date]?_toY(e.val):null),
       pointRadius:arr.map(e=>grouped[e.date]?6:0),
       pointBackgroundColor:arr.map(e=>{ if(!grouped[e.date])return'transparent'; const net=grouped[e.date].reduce((s,f)=>s+(f.type==='in'?f.val:-f.val),0); return net<0?'#e03333':'#00a86b'; }),
       pointBorderColor:'#fff',pointBorderWidth:1.5,borderWidth:0,showLine:false,tension:0};
@@ -419,21 +424,29 @@ function renderCharts(){
     const allDates=[...new Set([...yfF.map(e=>e.date),...tyF.map(e=>e.date)])].sort();
     labels=allDates.map(d=>d.slice(5));
     const ym=Object.fromEntries(yfF.map(e=>[e.date,e.val])),tm=Object.fromEntries(tyF.map(e=>[e.date,e.val]));
+    const yfInit=yfF.length?yfF[0].val:1, tyInit=tyF.length?tyF[0].val:1;
+    const toYboth=(v,init)=> yAxisMode==='pct'?((v-init)/init*100):v;
     datasets=[
-      {label:'永豐',data:allDates.map(d=>ym[d]??null),borderColor:'#00a86b',backgroundColor:'rgba(0,168,107,0.08)',borderWidth:1.5,pointRadius:0,tension:0.3,fill:false,spanGaps:true},
-      {label:'統一',data:allDates.map(d=>tm[d]??null),borderColor:'#2080e0',backgroundColor:'rgba(32,128,224,0.08)',borderWidth:1.5,pointRadius:0,tension:0.3,fill:false,spanGaps:true}
+      {label:'永豐',data:allDates.map(d=>ym[d]!=null?toYboth(ym[d],yfInit):null),borderColor:'#00a86b',backgroundColor:'rgba(0,168,107,0.08)',borderWidth:1.5,pointRadius:0,tension:0.3,fill:false,spanGaps:true},
+      {label:'統一',data:allDates.map(d=>tm[d]!=null?toYboth(tm[d],tyInit):null),borderColor:'#2080e0',backgroundColor:'rgba(32,128,224,0.08)',borderWidth:1.5,pointRadius:0,tension:0.3,fill:false,spanGaps:true}
     ];
+    document.getElementById('peak-distance').innerHTML='';
   } else {
     const d=chartMode==='yf'?yfF:tyF,color=chartMode==='yf'?'#00a86b':'#2080e0',bgColor=chartMode==='yf'?'rgba(0,168,107,0.1)':'rgba(32,128,224,0.1)';
     labels=d.map(e=>e.date.slice(5));
     const profit=calcProfitSeries(d,chartMode);
     const hasCF=cfData.some(c=>c.acct===chartMode&&d.some(e=>e.date>=c.date));
+    // Y軸資料轉換
+    const initVal = d.length ? d[0].val : 1;
+    const toY = (v) => yAxisMode==='pct' ? ((v-initVal)/initVal*100) : v;
+    const profitToY = (v) => yAxisMode==='pct' ? (v/initVal*100) : v;
     datasets=[
-      {label:'實際帳戶',data:d.map(e=>e.val),borderColor:color,backgroundColor:bgColor,borderWidth:1.5,pointRadius:0,tension:0.3,fill:true}
+      {label:'實際帳戶',data:d.map(e=>toY(e.val)),borderColor:color,backgroundColor:bgColor,borderWidth:1.5,pointRadius:0,tension:0.3,fill:true}
     ];
     if(hasCF&&profit.some(v=>v!==0)){
-      datasets.push({label:'累計獲利',data:profit,borderColor:'#f0a500',backgroundColor:'rgba(240,160,0,0.08)',borderWidth:1.5,pointRadius:0,tension:0.3,fill:true,borderDash:[5,3]});
+      datasets.push({label:'累計獲利',data:profit.map(v=>profitToY(v)),borderColor:'#f0a500',backgroundColor:'rgba(240,160,0,0.08)',borderWidth:1.5,pointRadius:0,tension:0.3,fill:true,borderDash:[5,3]});
     }
+    updatePeakDistance(d, chartMode);
     const mk=cfMarkers(d,chartMode); if(mk)datasets.push(mk);
   }
   if(eqChart)eqChart.destroy();
@@ -442,7 +455,7 @@ function renderCharts(){
     options:{responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:true,labels:{color:'#999',font:{family:mf,size:11},boxWidth:10,padding:12}},
                tooltip:{callbacks:{label:(ctx)=>{ if(ctx.dataset.label==='出入金'){const d=chartMode==='yf'?yfF:tyF,date=d[ctx.dataIndex]?.date,flows=cfData.filter(c=>c.acct===chartMode&&c.date===date);return flows.map(f=>`${f.type==='out'?'出金':'入金'} ${fmtTWD(f.val)}`);} return fmtTWD(ctx.raw); }}}},
-      scales:{x:{ticks:{color:tc,maxTicksLimit:6,maxRotation:0,font:{family:mf,size:10}},grid:{color:gc}},y:{ticks:{color:tc,callback:v=>v>=10000?(v/10000).toFixed(0)+'萬':v,font:{family:mf,size:10}},grid:{color:gc}}}}
+      scales:{x:{ticks:{color:tc,maxTicksLimit:6,maxRotation:0,font:{family:mf,size:10}},grid:{color:gc}},y:{ticks:{color:tc,callback:v=>yAxisMode==='pct'?v.toFixed(1)+'%':(v>=10000?(v/10000).toFixed(0)+'萬':v),font:{family:mf,size:10}},grid:{color:gc}}}}
   });
   const mddKey=chartMode==='ty'?'ty':'yf',mddSrc=chartMode==='ty'?tyF:yfF;
   const mddColor=chartMode==='ty'?'rgba(32,128,224,0.7)':'rgba(224,51,51,0.7)';
@@ -518,6 +531,32 @@ function renderCashflow(){
 }
 
 // ── UI ────────────────────────────────────────
+function toggleYAxis(){
+  yAxisMode = yAxisMode==='amount' ? 'pct' : 'amount';
+  const btn = document.getElementById('yaxis-toggle');
+  if(btn){
+    btn.textContent = yAxisMode==='pct' ? '元 切換' : '% 切換';
+    btn.style.background = yAxisMode==='pct' ? 'var(--green)' : '';
+    btn.style.color = yAxisMode==='pct' ? '#fff' : '';
+    btn.style.borderColor = yAxisMode==='pct' ? 'var(--green)' : '';
+  }
+  renderCharts();
+}
+
+function updatePeakDistance(arr, acctKey){
+  const el = document.getElementById('peak-distance');
+  if(!el || !arr.length) return;
+  const latest = arr[arr.length-1];
+  const peak = Math.max(...arr.map(e=>e.val));
+  const diff = latest.val - peak;
+  const diffPct = diff / peak * 100;
+  if(diff >= 0){
+    el.innerHTML = '<span style="color:var(--green)">▲ 歷史新高</span>';
+  } else {
+    el.innerHTML = `距創高 <span style="color:var(--red)">${fmtTWD(diff)}</span> <span style="color:var(--muted)">(${diffPct.toFixed(2)}%)</span>`;
+  }
+}
+
 function switchTab(name){ const tabs=['today','chart','monthly','history','cashflow']; document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',tabs[i]===name)); document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id==='page-'+name)); if(name==='chart')renderCharts(); if(name==='monthly')renderMonthly(); if(name==='history')renderHistory(); if(name==='cashflow')renderCashflow(); }
 function setPeriod(p,btn){ currentPeriod=p; document.querySelectorAll('.pbtn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); renderCharts(); }
 function setChartMode(mode){ chartMode=mode; document.getElementById('ct-yf').className='ctbtn'+(mode==='yf'?' on-yf':''); document.getElementById('ct-ty').className='ctbtn'+(mode==='ty'?' on-ty':''); document.getElementById('ct-both').className='ctbtn'+(mode==='both'?' on-both':''); renderCharts(); }
